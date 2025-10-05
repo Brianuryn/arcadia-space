@@ -19,16 +19,16 @@ const HabitatDesignerB = () => {
 
   // Módulos disponibles - AHORA EN LISTA VERTICAL
   const availableModules = [
-    { id: 'living-quarters', name: 'Habitaciones', type: 'interior', width: 6, height: 4, energyConsumption: -5, weight: 1500, icon: '🛏️' },
-    { id: 'kitchen', name: 'Cocina', type: 'interior', width: 4, height: 4, energyConsumption: -8, weight: 1200, icon: '🍳' },
-    { id: 'lab', name: 'Laboratorio', type: 'interior', width: 6, height: 5, energyConsumption: -12, weight: 2000, icon: '🔬' },
-    { id: 'storage', name: 'Almacenamiento', type: 'interior', width: 5, height: 4, energyConsumption: -2, weight: 800, icon: '📦' },
-    { id: 'water-storage', name: 'Almacenamiento de Agua', type: 'exterior', width: 4, height: 4, energyConsumption: -1, weight: 1000, icon: '💧' },
-    { id: 'solar-panel', name: 'Paneles Solares', type: 'exterior', width: 8, height: 4, energyConsumption: 25, weight: 500, icon: '☀️' },
-    { id: 'nuclear-generator', name: 'Generador Nuclear', type: 'exterior', width: 6, height: 6, energyConsumption: 100, weight: 3000, icon: '⚛️' },
-    { id: 'greenhouse', name: 'Invernadero', type: 'interior', width: 8, height: 6, energyConsumption: -15, weight: 2500, icon: '🌱' },
-    { id: 'airlock', name: 'Eslúa', type: 'interior', width: 3, height: 3, energyConsumption: -3, weight: 800, icon: '🚪' },
-    { id: 'comms', name: 'Comunicaciones', type: 'exterior', width: 3, height: 3, energyConsumption: -4, weight: 600, icon: '📡' }
+    { id: 'living-quarters', name: 'Living Quarters', type: 'interior', width: 6, height: 4, energyConsumption: -5, weight: 1500, icon: '🛏️' },
+    { id: 'kitchen', name: 'Kitchen', type: 'interior', width: 4, height: 4, energyConsumption: -8, weight: 1200, icon: '🍳' },
+    { id: 'lab', name: 'Laboratory', type: 'interior', width: 6, height: 5, energyConsumption: -12, weight: 2000, icon: '🔬' },
+    { id: 'storage', name: 'Storage', type: 'interior', width: 5, height: 4, energyConsumption: -2, weight: 800, icon: '📦' },
+    { id: 'water-storage', name: 'Water Storage', type: 'exterior', width: 4, height: 4, energyConsumption: -1, weight: 1000, icon: '💧' },
+    { id: 'solar-panel', name: 'Solar Panels', type: 'exterior', width: 8, height: 4, energyConsumption: 25, weight: 500, icon: '☀️' },
+    { id: 'nuclear-generator', name: 'Nuclear Generator', type: 'exterior', width: 6, height: 6, energyConsumption: 100, weight: 3000, icon: '⚛️' },
+    { id: 'greenhouse', name: 'Greenhouse', type: 'interior', width: 8, height: 6, energyConsumption: -15, weight: 2500, icon: '🌱' },
+    { id: 'airlock', name: 'Airlock', type: 'interior', width: 3, height: 3, energyConsumption: -3, weight: 800, icon: '🚪' },
+    { id: 'comms', name: 'Communications', type: 'exterior', width: 3, height: 3, energyConsumption: -4, weight: 600, icon: '📡' }
   ];
 
   // Funciones de zoom
@@ -277,12 +277,12 @@ const HabitatDesignerB = () => {
       ctx.fillStyle = 'rgba(96, 165, 250, 0.9)';
       ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`Módulo listo: ${moduleToPlace.name} - Haz clic en para colocar`, centerX, 30);
+      ctx.fillText(`Ready to place: ${moduleToPlace.name} - Click anywhere to place`, centerX, 30);
     } else if (selectedModule) {
       ctx.fillStyle = 'rgba(72, 187, 120, 0.9)';
       ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`Módulo seleccionado: ${selectedModule.name} - Arrastra para mover`, centerX, 30);
+      ctx.fillText(`Selected module: ${selectedModule.name} - Drag to move`, centerX, 30);
     }
 
   }, [habitatConfig, modules, moduleToPlace, selectedModule]);
@@ -301,7 +301,7 @@ const HabitatDesignerB = () => {
   };
 
   const clearAllModules = () => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar todos los módulos?')) {
+    if (window.confirm('Are you sure you want to delete all modules?')) {
       setModules([]);
       setSelectedModule(null);
       setModuleToPlace(null);
@@ -350,7 +350,7 @@ const HabitatDesignerB = () => {
             {/* Módulos Disponibles - AHORA EN LISTA VERTICAL */}
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h2 className="text-xl font-bold text-cyan-400 mb-4 pb-2 border-b border-gray-700">
-                Módulos Disponibles
+                Available Modules
               </h2>
               
               <div className="space-y-2 mb-4 max-h-96 overflow-y-auto">
@@ -385,7 +385,7 @@ const HabitatDesignerB = () => {
               {moduleToPlace && (
                 <div className="bg-cyan-500/10 border border-cyan-500 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-cyan-300">Listo para colocar:</span>
+                    <span className="font-semibold text-cyan-300">Ready to place:</span>
                     <button
                       onClick={() => setModuleToPlace(null)}
                       className="text-cyan-300 hover:text-white bg-cyan-500/20 rounded-full w-6 h-6 flex items-center justify-center"
@@ -397,7 +397,7 @@ const HabitatDesignerB = () => {
                     <span className="text-2xl">{moduleToPlace.icon}</span>
                     <span className="font-semibold">{moduleToPlace.name}</span>
                   </div>
-                  <p className="text-cyan-200 text-sm mt-2">Haz clic en CUALQUIER parte del área para colocarlo</p>
+                  <p className="text-cyan-200 text-sm mt-2">Click ANYWHERE in the area to place it</p>
                 </div>
               )}
             </div>
@@ -405,27 +405,27 @@ const HabitatDesignerB = () => {
             {/* Configuración del Hábitat */}
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <h2 className="text-xl font-bold text-cyan-400 mb-4 pb-2 border-b border-gray-700">
-                Configuración
+                Configuration
               </h2>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Forma del Hábitat
+                    Habitat Shape
                   </label>
                   <select 
                     value={habitatConfig.shape}
                     onChange={(e) => setHabitatConfig(prev => ({...prev, shape: e.target.value}))}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
                   >
-                    <option value="cilindrica">Cilíndrica Horizontal</option>
-                    <option value="domo">Domo</option>
+                    <option value="cilindrica">Horizontal Cylinder</option>
+                    <option value="domo">Vertical Cylinder</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {habitatConfig.shape === 'domo' ? 'Diámetro (metros)' : 'Largo (metros)'}
+                    {habitatConfig.shape === 'domo' ? 'Diameter (meters)' : 'Length (meters)'}
                   </label>
                   <input
                     type="number"
@@ -440,7 +440,7 @@ const HabitatDesignerB = () => {
                 {habitatConfig.shape === 'cilindrica' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Altura (metros)
+                      Height (meters)
                     </label>
                     <input
                       type="number"
@@ -455,7 +455,7 @@ const HabitatDesignerB = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Tamaño de la tripulación
+                    Crew Size
                   </label>
                   <input
                     type="number"
@@ -475,14 +475,14 @@ const HabitatDesignerB = () => {
                     className="w-4 h-4 text-cyan-500 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500"
                   />
                   <label className="text-sm font-medium text-gray-300">
-                    Mostrar cuadrícula
+                    Show grid
                   </label>
                 </div>
               </div>
 
               {/* Controles de Zoom */}
               <div className="mt-6 pt-4 border-t border-gray-700">
-                <h3 className="text-lg font-semibold text-cyan-400 mb-3">Zoom de la Vista</h3>
+                <h3 className="text-lg font-semibold text-cyan-400 mb-3">View Zoom</h3>
                 <div className="flex items-center justify-between bg-gray-700 rounded-lg p-3">
                   <button
                     onClick={zoomOut}
@@ -521,7 +521,7 @@ const HabitatDesignerB = () => {
               
               {/* Información del Módulo */}
               <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-lg font-bold text-cyan-400 mb-4">Información del Módulo</h3>
+                <h3 className="text-lg font-bold text-cyan-400 mb-4">Module Information</h3>
                 <div className="min-h-[200px]">
                   {selectedModule ? (
                     <div className="space-y-4">
@@ -530,29 +530,29 @@ const HabitatDesignerB = () => {
                         <div>
                           <h4 className="text-xl font-bold">{selectedModule.name}</h4>
                           <div className={`text-sm ${modulesOutside > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
-                            {modulesOutside > 0 ? '⚠️ Fuera del hábitat' : '✓ Dentro del hábitat'}
+                            {modulesOutside > 0 ? '⚠️ Outside habitat' : '✓ Inside habitat'}
                           </div>
                         </div>
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Tipo:</span>
+                          <span className="text-gray-400">Type:</span>
                           <span>{selectedModule.type === 'interior' ? 'Interior' : 'Exterior'}</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Dimensiones:</span>
+                          <span className="text-gray-400">Dimensions:</span>
                           <span>{selectedModule.width} × {selectedModule.height} m</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Peso:</span>
+                          <span className="text-gray-400">Weight:</span>
                           <span>{selectedModule.weight} kg</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Costo:</span>
+                          <span className="text-gray-400">Cost:</span>
                           <span>${(selectedModule.weight * 10000).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between py-2">
-                          <span className="text-gray-400">Energía:</span>
+                          <span className="text-gray-400">Energy:</span>
                           <span className={selectedModule.energyConsumption > 0 ? 'text-green-400' : 'text-red-400'}>
                             {selectedModule.energyConsumption > 0 ? '+' : ''}{selectedModule.energyConsumption} kW
                           </span>
@@ -562,7 +562,7 @@ const HabitatDesignerB = () => {
                         onClick={deleteSelectedModule}
                         className="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg font-semibold transition-colors"
                       >
-                        Eliminar Módulo
+                        Delete Module
                       </button>
                     </div>
                   ) : moduleToPlace ? (
@@ -573,23 +573,23 @@ const HabitatDesignerB = () => {
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Tipo:</span>
+                          <span className="text-gray-400">Type:</span>
                           <span>{moduleToPlace.type === 'interior' ? 'Interior' : 'Exterior'}</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Dimensiones:</span>
+                          <span className="text-gray-400">Dimensions:</span>
                           <span>{moduleToPlace.width} × {moduleToPlace.height} m</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Peso:</span>
+                          <span className="text-gray-400">Weight:</span>
                           <span>{moduleToPlace.weight} kg</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-gray-700">
-                          <span className="text-gray-400">Costo:</span>
+                          <span className="text-gray-400">Cost:</span>
                           <span>${(moduleToPlace.weight * 10000).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between py-2">
-                          <span className="text-gray-400">Energía:</span>
+                          <span className="text-gray-400">Energy:</span>
                           <span className={moduleToPlace.energyConsumption > 0 ? 'text-green-400' : 'text-red-400'}>
                             {moduleToPlace.energyConsumption > 0 ? '+' : ''}{moduleToPlace.energyConsumption} kW
                           </span>
@@ -598,7 +598,7 @@ const HabitatDesignerB = () => {
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-gray-400">
-                      Selecciona un módulo para ver su información
+                      Select a module to view its information
                     </div>
                   )}
                 </div>
@@ -606,36 +606,36 @@ const HabitatDesignerB = () => {
 
               {/* Estadísticas y Acciones */}
               <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-                <h3 className="text-lg font-bold text-cyan-400 mb-4">Estadísticas</h3>
+                <h3 className="text-lg font-bold text-cyan-400 mb-4">Statistics</h3>
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Costo Total</span>
+                    <span className="text-gray-300">Total Cost</span>
                     <span className="font-bold text-lg">${totalCost.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Producción Energía</span>
+                    <span className="text-gray-300">Energy Production</span>
                     <span className="font-bold text-lg text-green-400">{energyProduction} kW</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Consumo Energía</span>
+                    <span className="text-gray-300">Energy Consumption</span>
                     <span className="font-bold text-lg text-red-400">{energyConsumption} kW</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Balance Energético</span>
+                    <span className="text-gray-300">Energy Balance</span>
                     <span className={`font-bold text-lg ${energyDeficit ? 'text-red-400' : 'text-green-400'}`}>
                       {energyBalance} kW
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Módulos Totales</span>
+                    <span className="text-gray-300">Total Modules</span>
                     <span className="font-bold text-lg">{modules.length}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Dentro del Hábitat</span>
+                    <span className="text-gray-300">Inside Habitat</span>
                     <span className="font-bold text-lg text-green-400">{modulesInside}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-gray-700/50 rounded-lg">
-                    <span className="text-gray-300">Fuera del Hábitat</span>
+                    <span className="text-gray-300">Outside Habitat</span>
                     <span className={`font-bold text-lg ${modulesOutside > 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
                       {modulesOutside}
                     </span>
@@ -646,7 +646,7 @@ const HabitatDesignerB = () => {
                   <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-4">
                     <div className="flex items-center space-x-2 text-red-400">
                       <span>⚠️</span>
-                      <span>Déficit de {Math.abs(energyBalance)} kW</span>
+                      <span>Deficit of {Math.abs(energyBalance)} kW</span>
                     </div>
                   </div>
                 )}
@@ -655,18 +655,18 @@ const HabitatDesignerB = () => {
                   <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-3 mb-4">
                     <div className="flex items-center space-x-2 text-yellow-400">
                       <span>⚠️</span>
-                      <span>{modulesOutside} módulo(s) fuera del hábitat</span>
+                      <span>{modulesOutside} module(s) outside habitat</span>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <h3 className="text-lg font-bold text-cyan-400 mb-3">Acciones</h3>
+                  <h3 className="text-lg font-bold text-cyan-400 mb-3">Actions</h3>
                   <button
                     onClick={clearAllModules}
                     className="w-full bg-gray-700 hover:bg-gray-600 border border-gray-600 text-white py-3 rounded-lg font-semibold transition-colors"
                   >
-                    Limpiar Todo
+                    Clear All
                   </button>
                 </div>
               </div>
@@ -676,18 +676,18 @@ const HabitatDesignerB = () => {
             <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
                 <h2 className="text-xl font-bold text-cyan-400 mb-2 sm:mb-0">
-                  Vista del Hábitat - {habitatConfig.shape === 'cilindrica' ? 'Cilíndrica Horizontal' : 'Domo'}
+                  Habitat View - {habitatConfig.shape === 'cilindrica' ? 'Horizontal Cylinder' : 'Vertical Cylinder'}
                 </h2>
                 <div className="flex flex-col sm:items-end space-y-1">
                   <span className="text-sm text-gray-400 bg-gray-700/50 px-3 py-1 rounded">
-                    Zoom: {Math.round(habitatConfig.zoom * 100)}% • Grilla: {habitatConfig.showGrid ? 'ON' : 'OFF'}
+                    Zoom: {Math.round(habitatConfig.zoom * 100)}% • Grid: {habitatConfig.showGrid ? 'ON' : 'OFF'}
                   </span>
                   <span className="text-sm text-cyan-300">
                     {moduleToPlace 
-                      ? 'Haz clic en CUALQUIER parte para colocar el módulo' 
+                      ? 'Click ANYWHERE to place the module' 
                       : selectedModule 
-                      ? 'Arrastra para mover'
-                      : 'Selecciona un módulo para comenzar'
+                      ? 'Drag to move'
+                      : 'Select a module to begin'
                     }
                   </span>
                 </div>
@@ -711,12 +711,7 @@ const HabitatDesignerB = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 border-t border-gray-800 py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-gray-400">
-          <p>© 2025 Arkadia Space — Todos los derechos reservados.</p>
-        </div>
-      </footer>
+
     </div>
   );
 };
