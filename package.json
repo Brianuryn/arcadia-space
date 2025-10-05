@@ -12,6 +12,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.6.2",
     "lucide-react": "^0.544.0",
@@ -25,10 +26,26 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.14",
     "vite": "^7.1.7"
-  }
+  },
+  "description": "Projecto Arkadia Space",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Brianuryn/arcadia-space.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Brianuryn/arcadia-space/issues"
+  },
+  "homepage": "https://github.com/Brianuryn/arcadia-space#readme"
 }
