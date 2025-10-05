@@ -8,13 +8,13 @@ const HabitatDesigner = () => {
     crewSize: 6,
     shape: 'cilindrica',
     showGrid: true,
-    zoom: 1.0 // Nuevo: nivel de zoom
+    zoom: 1.0
   });
   
   const [modules, setModules] = useState([]);
-  const [selectedModule, setSelectedModule] = useState(null);
+  const [moduleToPlace, setModuleToPlace] = useState(null); // Módulo seleccionado para COLOCAR
+  const [selectedModule, setSelectedModule] = useState(null); // Módulo seleccionado para MOVER/ELIMINAR
   const [draggedModule, setDraggedModule] = useState(null);
-  const [showModulesDropdown, setShowModulesDropdown] = useState(false);
   const canvasRef = useRef(null);
 
   // Módulos disponibles
@@ -53,14 +53,154 @@ const HabitatDesigner = () => {
     }));
   }, []);
 
+  // COLOCACIÓN - Solo cuando tenemos un moduleToPlace
+  const handleCanvasClick = (e) => {
+    // Solo colocar si tenemos un módulo para colocar Y no estamos arrastrando
+    if (!moduleToPlace || draggedModule) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scale = 10 * habitatConfig.zoom;
+    
+    // Posición absoluta del click
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // Centro del canvas
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    
+    // Tamaño del hábitat en píxeles
+    const habitatWidth = habitatConfig.diameter * scale;
+    const habitatHeight = habitatConfig.shape === 'domo' ? habitatConfig.diameter * scale : habitatConfig.height * scale;
+    
+    // Esquina superior izquierda del hábitat
+    const habitatStartX = centerX - habitatWidth / 2;
+    const habitatStartY = centerY - habitatHeight / 2;
+    
+    // Verificar si el click está dentro del hábitat
+    if (clickX < habitatStartX || clickX > habitatStartX + habitatWidth ||
+        clickY < habitatStartY || clickY > habitatStartY + habitatHeight) {
+      return;
+    }
+    
+    // Convertir a coordenadas del hábitat (metros)
+    const habitatX = (clickX - habitatStartX) / scale;
+    const habitatY = (clickY - habitatStartY) / scale;
+    
+    // Ajustar para que el módulo quepa
+    const maxX = habitatConfig.diameter - moduleToPlace.width;
+    const maxY = habitatConfig.shape === 'domo' ? habitatConfig.diameter - moduleToPlace.height : habitatConfig.height - moduleToPlace.height;
+    
+    const adjustedX = Math.max(0, Math.min(habitatX, maxX));
+    const adjustedY = Math.max(0, Math.min(habitatY, maxY));
+    
+    // COLOCAR EL MÓDULO
+    const newModule = {
+      ...moduleToPlace,
+      id: `${moduleToPlace.id}-${Date.now()}`,
+      x: adjustedX,
+      y: adjustedY
+    };
+    
+    setModules(prev => [...prev, newModule]);
+  };
+
+  // MOVIMIENTO DE MÓDULOS - Solo para módulos existentes
+  const handleCanvasMouseDown = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scale = 10 * habitatConfig.zoom;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const habitatWidth = habitatConfig.diameter * scale;
+    const habitatHeight = habitatConfig.shape === 'domo' ? habitatConfig.diameter * scale : habitatConfig.height * scale;
+    const habitatStartX = centerX - habitatWidth / 2;
+    const habitatStartY = centerY - habitatHeight / 2;
+    
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // Convertir a coordenadas del hábitat
+    const habitatX = (clickX - habitatStartX) / scale;
+    const habitatY = (clickY - habitatStartY) / scale;
+    
+    // Buscar módulo en la posición del clic
+    const clickedModule = modules.find(module =>
+      habitatX >= module.x && habitatX <= module.x + module.width &&
+      habitatY >= module.y && habitatY <= module.y + module.height
+    );
+
+    if (clickedModule) {
+      // Seleccionar para mover/eliminar
+      setSelectedModule(clickedModule);
+      // Limpiar la selección para colocar
+      setModuleToPlace(null);
+      
+      setDraggedModule({
+        module: clickedModule,
+        offsetX: habitatX - clickedModule.x,
+        offsetY: habitatY - clickedModule.y
+      });
+    } else {
+      // Si se hace clic en área vacía, deseleccionar todo
+      setSelectedModule(null);
+    }
+  };
+
+  const handleCanvasMouseMove = (e) => {
+    if (!draggedModule) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scale = 10 * habitatConfig.zoom;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const habitatWidth = habitatConfig.diameter * scale;
+    const habitatHeight = habitatConfig.shape === 'domo' ? habitatConfig.diameter * scale : habitatConfig.height * scale;
+    const habitatStartX = centerX - habitatWidth / 2;
+    const habitatStartY = centerY - habitatHeight / 2;
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const habitatX = (mouseX - habitatStartX) / scale;
+    const habitatY = (mouseY - habitatStartY) / scale;
+
+    const newX = habitatX - draggedModule.offsetX;
+    const newY = habitatY - draggedModule.offsetY;
+
+    // Verificar límites
+    const maxX = habitatConfig.diameter - draggedModule.module.width;
+    const maxY = habitatConfig.shape === 'domo' ? habitatConfig.diameter - draggedModule.module.height : habitatConfig.height - draggedModule.module.height;
+
+    const clampedX = Math.max(0, Math.min(newX, maxX));
+    const clampedY = Math.max(0, Math.min(newY, maxY));
+
+    setModules(prev => prev.map(module => 
+      module.id === draggedModule.module.id 
+        ? { ...module, x: clampedX, y: clampedY }
+        : module
+    ));
+  };
+
+  const handleCanvasMouseUp = () => {
+    setDraggedModule(null);
+  };
+
   // Dibujar el hábitat y módulos
   const drawHabitat = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const baseScale = 10;
-    const scale = baseScale * habitatConfig.zoom;
+    const scale = 10 * habitatConfig.zoom;
     
     // Limpiar canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -132,12 +272,17 @@ const HabitatDesigner = () => {
     }
 
     // Dibujar módulos
+    const habitatWidth = habitatConfig.diameter * scale;
+    const habitatHeight = habitatConfig.shape === 'domo' ? habitatConfig.diameter * scale : habitatConfig.height * scale;
+    const habitatStartX = centerX - habitatWidth / 2;
+    const habitatStartY = centerY - habitatHeight / 2;
+
     modules.forEach(module => {
       const isSelected = selectedModule && selectedModule.id === module.id;
       
       // Calcular posición en píxeles
-      const x = centerX - (habitatConfig.diameter * scale) / 2 + module.x * scale;
-      const y = centerY - (habitatConfig.shape === 'domo' ? (habitatConfig.diameter * scale) / 2 : (habitatConfig.height * scale) / 2) + module.y * scale;
+      const x = habitatStartX + module.x * scale;
+      const y = habitatStartY + module.y * scale;
       const width = module.width * scale;
       const height = module.height * scale;
 
@@ -166,165 +311,25 @@ const HabitatDesigner = () => {
       ctx.fillText(energyText, x + width / 2, y + height / 2 + 12);
     });
 
-    // Dibujar información de ayuda si hay un módulo seleccionado
-    if (selectedModule && !modules.some(m => m.id === selectedModule.id)) {
-      ctx.fillStyle = 'rgba(96, 165, 250, 0.8)';
-      ctx.font = '14px Arial';
+    // Dibujar información de ayuda
+    if (moduleToPlace) {
+      ctx.fillStyle = 'rgba(96, 165, 250, 0.9)';
+      ctx.font = 'bold 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('Haz clic en el hábitat para colocar el módulo', centerX, 30);
+      ctx.fillText(`Módulo listo: ${moduleToPlace.name} - Haz clic en el hábitat para colocarlo`, centerX, 30);
+    } else if (selectedModule) {
+      ctx.fillStyle = 'rgba(72, 187, 120, 0.9)';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`Módulo seleccionado: ${selectedModule.name} - Arrastra para mover`, centerX, 30);
     }
 
-  }, [habitatConfig, modules, selectedModule]);
-
-  // COLOCACIÓN SIMPLIFICADA - SIN COMPLICACIONES
-  const handleCanvasClick = (e) => {
-    console.log('Click en canvas');
-    
-    // Si estamos arrastrando, no colocar
-    if (draggedModule) {
-      console.log('Ignorando click porque hay arrastre activo');
-      return;
-    }
-
-    // Si no hay módulo seleccionado, no hacer nada
-    if (!selectedModule) {
-      console.log('No hay módulo seleccionado');
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const baseScale = 10;
-    const scale = baseScale * habitatConfig.zoom;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    // Coordenadas del click en píxeles del canvas
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    
-    console.log('Coordenadas click:', { clickX, clickY });
-
-    // Convertir a coordenadas del hábitat (0 a diameter/height)
-    let habitatX = (clickX - (centerX - (habitatConfig.diameter * scale) / 2)) / scale;
-    let habitatY = (clickY - (centerY - (habitatConfig.shape === 'domo' ? (habitatConfig.diameter * scale) / 2 : (habitatConfig.height * scale) / 2))) / scale;
-
-    console.log('Coordenadas hábitat antes de ajuste:', { habitatX, habitatY });
-
-    // Ajustar para que el módulo quepa
-    const maxX = habitatConfig.diameter - selectedModule.width;
-    const maxY = habitatConfig.shape === 'domo' ? habitatConfig.diameter - selectedModule.height : habitatConfig.height - selectedModule.height;
-
-    habitatX = Math.max(0, Math.min(habitatX, maxX));
-    habitatY = Math.max(0, Math.min(habitatY, maxY));
-
-    console.log('Coordenadas hábitat después de ajuste:', { habitatX, habitatY });
-    console.log('Límites:', { maxX, maxY });
-
-    // Verificar que las coordenadas sean válidas
-    if (habitatX >= 0 && habitatY >= 0 && habitatX <= maxX && habitatY <= maxY) {
-      // Crear y agregar el nuevo módulo
-      const newModule = {
-        ...selectedModule,
-        id: `${selectedModule.id}-${Date.now()}`,
-        x: habitatX,
-        y: habitatY
-      };
-      
-      console.log('Agregando nuevo módulo:', newModule);
-      setModules(prev => [...prev, newModule]);
-    } else {
-      console.log('Coordenadas fuera de límites, no se puede colocar');
-    }
-  };
-
-  // MOVIMIENTO DE MÓDULOS
-  const handleCanvasMouseDown = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const baseScale = 10;
-    const scale = baseScale * habitatConfig.zoom;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    
-    // Convertir a coordenadas del hábitat
-    const habitatX = (clickX - (centerX - (habitatConfig.diameter * scale) / 2)) / scale;
-    const habitatY = (clickY - (centerY - (habitatConfig.shape === 'domo' ? (habitatConfig.diameter * scale) / 2 : (habitatConfig.height * scale) / 2))) / scale;
-
-    // Buscar módulo en la posición del clic
-    const clickedModule = modules.find(module =>
-      habitatX >= module.x && habitatX <= module.x + module.width &&
-      habitatY >= module.y && habitatY <= module.y + module.height
-    );
-
-    if (clickedModule) {
-      console.log('Módulo encontrado para mover:', clickedModule);
-      setSelectedModule(clickedModule);
-      setDraggedModule({
-        module: clickedModule,
-        offsetX: habitatX - clickedModule.x,
-        offsetY: habitatY - clickedModule.y
-      });
-    } else {
-      console.log('No se encontró módulo en la posición clickeada');
-      setSelectedModule(null);
-    }
-  };
-
-  const handleCanvasMouseMove = (e) => {
-    if (!draggedModule) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const baseScale = 10;
-    const scale = baseScale * habitatConfig.zoom;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-    
-    const habitatX = (mouseX - (centerX - (habitatConfig.diameter * scale) / 2)) / scale;
-    const habitatY = (mouseY - (centerY - (habitatConfig.shape === 'domo' ? (habitatConfig.diameter * scale) / 2 : (habitatConfig.height * scale) / 2))) / scale;
-
-    const newX = habitatX - draggedModule.offsetX;
-    const newY = habitatY - draggedModule.offsetY;
-
-    // Verificar límites
-    const maxX = habitatConfig.diameter - draggedModule.module.width;
-    const maxY = habitatConfig.shape === 'domo' ? habitatConfig.diameter - draggedModule.module.height : habitatConfig.height - draggedModule.module.height;
-
-    const clampedX = Math.max(0, Math.min(newX, maxX));
-    const clampedY = Math.max(0, Math.min(newY, maxY));
-
-    setModules(prev => prev.map(module => 
-      module.id === draggedModule.module.id 
-        ? { ...module, x: clampedX, y: clampedY }
-        : module
-    ));
-  };
-
-  const handleCanvasMouseUp = () => {
-    console.log('Soltando módulo arrastrado');
-    setDraggedModule(null);
-  };
+  }, [habitatConfig, modules, moduleToPlace, selectedModule]);
 
   // Funciones auxiliares
-  const addModule = useCallback((moduleType) => {
-    const moduleData = availableModules.find(m => m.id === moduleType);
-    if (moduleData) {
-      setSelectedModule(moduleData);
-      setShowModulesDropdown(false);
-    }
+  const selectModuleToPlace = useCallback((module) => {
+    setModuleToPlace(module);
+    setSelectedModule(null); // Limpiar selección de módulo existente
   }, []);
 
   const deleteSelectedModule = useCallback(() => {
@@ -342,6 +347,7 @@ const HabitatDesigner = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar todos los módulos?')) {
       setModules([]);
       setSelectedModule(null);
+      setModuleToPlace(null);
     }
   }, []);
 
@@ -368,46 +374,37 @@ const HabitatDesigner = () => {
 
       <div className="designer-layout">
         <div className="control-panel">
+          {/* MÓDULOS PARA COLOCAR */}
           <section className="modules-section">
             <h2>Módulos Disponibles</h2>
-            <div className="dropdown-container">
-              <button 
-                className="dropdown-button"
-                onClick={() => setShowModulesDropdown(!showModulesDropdown)}
-              >
-                <span>{selectedModule ? `${selectedModule.icon} ${selectedModule.name}` : 'Seleccionar módulo'}</span>
-                <span className="dropdown-arrow">▼</span>
-              </button>
-              
-              {showModulesDropdown && (
-                <div className="dropdown-menu">
-                  {availableModules.map(module => (
-                    <div
-                      key={module.id}
-                      className="dropdown-item"
-                      onClick={() => addModule(module.id)}
-                    >
-                      <span className="module-icon">{module.icon}</span>
-                      <span className="module-name">{module.name}</span>
-                      <span className="module-dims">{module.width}×{module.height}m</span>
-                      <span className={`module-energy ${module.energyConsumption > 0 ? 'energy-positive' : 'energy-negative'}`}>
-                        {module.energyConsumption > 0 ? '+' : ''}{module.energyConsumption}kW
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="modules-grid">
+              {availableModules.map(module => (
+                <button
+                  key={module.id}
+                  className={`module-button ${moduleToPlace?.id === module.id ? 'selected-to-place' : ''}`}
+                  onClick={() => selectModuleToPlace(module)}
+                >
+                  <div className="module-button-content">
+                    <span className="module-icon">{module.icon}</span>
+                    <span className="module-name">{module.name}</span>
+                    <span className="module-dims">{module.width}×{module.height}m</span>
+                    <span className={`module-energy ${module.energyConsumption > 0 ? 'energy-positive' : 'energy-negative'}`}>
+                      {module.energyConsumption > 0 ? '+' : ''}{module.energyConsumption}kW
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
             
-            {selectedModule && (
-              <div className="selected-module-info">
-                <p><strong>Módulo seleccionado:</strong></p>
+            {moduleToPlace && (
+              <div className="selected-module-info place-mode">
+                <p><strong>Módulo listo para colocar:</strong></p>
                 <div className="selected-module">
-                  <span className="module-icon">{selectedModule.icon}</span>
-                  <span className="module-name">{selectedModule.name}</span>
+                  <span className="module-icon">{moduleToPlace.icon}</span>
+                  <span className="module-name">{moduleToPlace.name}</span>
                   <button 
                     className="clear-selection"
-                    onClick={() => setSelectedModule(null)}
+                    onClick={() => setModuleToPlace(null)}
                   >
                     ×
                   </button>
@@ -482,7 +479,6 @@ const HabitatDesigner = () => {
               </label>
             </div>
 
-            {/* CONTROLES DE ZOOM */}
             <div className="zoom-controls">
               <h3>Zoom de la Vista</h3>
               <div className="zoom-buttons">
@@ -534,11 +530,37 @@ const HabitatDesigner = () => {
                           </span>
                         </div>
                       </div>
-                      {modules.some(m => m.id === selectedModule.id) && (
-                        <button className="delete-module-button" onClick={deleteSelectedModule}>
-                          Eliminar Módulo
-                        </button>
-                      )}
+                      <button className="delete-module-button" onClick={deleteSelectedModule}>
+                        Eliminar Módulo
+                      </button>
+                    </>
+                  ) : moduleToPlace ? (
+                    <>
+                      <h4>{moduleToPlace.name} {moduleToPlace.icon}</h4>
+                      <div className="module-details-grid">
+                        <div className="detail-item">
+                          <span className="detail-label">Tipo:</span>
+                          <span className="detail-value">{moduleToPlace.type === 'interior' ? 'Interior' : 'Exterior'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Dimensiones:</span>
+                          <span className="detail-value">{moduleToPlace.width} × {moduleToPlace.height} m</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Peso:</span>
+                          <span className="detail-value">{moduleToPlace.weight} kg</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Costo:</span>
+                          <span className="detail-value">${(moduleToPlace.weight * 10000).toLocaleString()}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Energía:</span>
+                          <span className={`detail-value ${moduleToPlace.energyConsumption > 0 ? 'energy-positive' : 'energy-negative'}`}>
+                            {moduleToPlace.energyConsumption > 0 ? '+' : ''}{moduleToPlace.energyConsumption} kW
+                          </span>
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <p className="no-module">Selecciona un módulo para ver su información</p>
@@ -597,7 +619,9 @@ const HabitatDesigner = () => {
               <h2>Vista del Hábitat - {habitatConfig.shape === 'cilindrica' ? 'Cilíndrica Horizontal' : 'Domo'}</h2>
               <div className="design-tips">
                 <span className="tip">Zoom: {Math.round(habitatConfig.zoom * 100)}% • Grilla: {habitatConfig.showGrid ? 'ON' : 'OFF'}</span>
-                <span className="tip">Haz clic para colocar • Arrastra para mover</span>
+                <span className="tip">
+                  {moduleToPlace ? 'Haz clic para colocar' : selectedModule ? 'Arrastra para mover • Botón Eliminar arriba' : 'Selecciona un módulo'}
+                </span>
               </div>
             </div>
             

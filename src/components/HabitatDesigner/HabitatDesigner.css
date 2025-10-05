@@ -1,5 +1,90 @@
 /* Añadir al CSS existente */
+/* Estilos para diferenciar los modos */
+.module-button.selected-to-place {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+}
 
+.selected-module-info.place-mode {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.1);
+}
+
+/* El resto del CSS permanece igual */
+/* Estilos para los botones de módulos */
+.modules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.module-button {
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.module-button:hover {
+  border-color: #60a5fa;
+  transform: translateY(-1px);
+}
+
+.module-button.selected {
+  border-color: #4f46e5;
+  background: rgba(79, 70, 229, 0.1);
+}
+
+.module-button-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.module-button .module-icon {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.module-button .module-name {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.module-button .module-dims {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.module-button .module-energy {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.energy-positive {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+.energy-negative {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* Resto del CSS permanece igual */
 /* Controles de Zoom */
 .zoom-controls {
   margin-top: 1.5rem;
