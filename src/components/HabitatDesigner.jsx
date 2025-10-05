@@ -13,7 +13,22 @@ const HabitatDesigner = () => {
   const [zoomLevel, setZoomLevel] = useState(100);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
+  const [selectedTopViewSection, setSelectedTopViewSection] = useState(0);
+  const [draggedTopViewModule, setDraggedTopViewModule] = useState(null);
+  const [moduleTopPositions, setModuleTopPositions] = useState({});
+  const [topViewZoom, setTopViewZoom] = useState(100);
+  const [topViewPanX, setTopViewPanX] = useState(0);
+  const [topViewPanY, setTopViewPanY] = useState(0);
+  const [mouseDown3D, setMouseDown3D] = useState(false);
+  const [mouse3DPos, setMouse3DPos] = useState({ x: 0, y: 0 });
+  const [camera3DRotation, setCamera3DRotation] = useState({ theta: Math.PI / 4, phi: Math.PI / 6 });
+  const [threeLoaded, setThreeLoaded] = useState(false);
   const canvasRef = useRef(null);
+  const topViewCanvasRef = useRef(null);
+  const canvas3DRef = useRef(null);
+  const scene3DRef = useRef(null);
+  const camera3DRef = useRef(null);
+  const renderer3DRef = useRef(null);
 
   const SCALE = 50;
   const CANVAS_WIDTH = 600;
@@ -37,8 +52,9 @@ const HabitatDesigner = () => {
     { id: 'cocina', name: 'Galley', width: 2.4, length: 2, depth: 1.6, color: '#EF4444', icon: '🍳', weight: 200, serviceOnly: false },
     { id: 'bano', name: 'Bathroom', width: 1.2, length: 2, depth: 1.6, color: '#10B981', icon: '🚿', weight: 150, serviceOnly: false },
     { id: 'operaciones', name: 'Operations Area', width: 3, length: 2.2, depth: 1.8, color: '#F59E0B', icon: '💻', weight: 120, serviceOnly: false },
-    { id: 'laboratorio', name: 'Laboratory', width: 3, length: 2.1, depth: 1.8, color: '#EC4899', icon: '🔬', weight: 300, serviceOnly: false },
-    { id: 'invernadero', name: 'Greenhouse', width: 3.5, length: 2.2, depth: 2.2, color: '#22C55E', icon: '🌱', weight: 250, serviceOnly: false },
+    { id: 'laboratorio', name: 'Laboratory', width: 3, length: 2.1, depth: 1.8, color: '#EC4899', icon: '🔬', weight: 300, serviceOnly: false, optional: true },
+    { id: 'invernadero', name: 'Greenhouse', width: 3.5, length: 2.2, depth: 2.2, color: '#22C55E', icon: '🌱', weight: 250, serviceOnly: false, optional: true },
+    { id: 'gimnasio', name: 'Gymnasium', width: 1.5, length: 2, depth: 1.5, color: '#A855F7', icon: '🏋️', weight: 180, serviceOnly: false, optional: true },
     { id: 'combustible', name: 'Fuel Tank', width: 1.5, length: 2, depth: 1.5, color: '#DC2626', icon: '⛽', weight: 400, serviceOnly: true },
     { id: 'oxidante', name: 'Oxidizer Tank', width: 1.5, length: 2, depth: 1.5, color: '#F97316', icon: '🧪', weight: 400, serviceOnly: true },
     { id: 'soporte-vital', name: 'Life Support', width: 2, length: 2.5, depth: 1.8, color: '#06B6D4', icon: '💨', weight: 500, serviceOnly: true },
@@ -48,7 +64,45 @@ const HabitatDesigner = () => {
 
   useEffect(() => {
     drawHabitat();
-  }, [dimensions, placedModules, draggedModule, crewSize, zoomLevel, panX, panY]);
+    drawTopView();
+  }, [dimensions, placedModules, draggedModule, draggedTopViewModule, crewSize, zoomLevel, panX, panY, topViewZoom, topViewPanX, topViewPanY, selectedTopViewSection]);
+
+  useEffect(() => {
+    // Load Three.js dynamically
+    if (window.THREE) {
+      setThreeLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    script.async = true;
+    script.onload = () => {
+      setThreeLoaded(true);
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      if (script.parentNode) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!threeLoaded) return;
+    init3DView();
+    return () => {
+      if (renderer3DRef.current) {
+        renderer3DRef.current.dispose();
+      }
+    };
+  }, [threeLoaded]);
+
+  useEffect(() => {
+    if (!threeLoaded) return;
+    render3DView();
+  }, [dimensions, crewSize, camera3DRotation, threeLoaded]);
 
   useEffect(() => {
     validateDesign();
@@ -226,15 +280,15 @@ const HabitatDesigner = () => {
     const stairwellY = cylY + 20;
     const stairwellHeight = cylHeight - 20;
     
-    ctx.fillStyle = '#4B5563';
+    ctx.fillStyle = '#D1D5DB';
     ctx.fillRect(stairwellX, stairwellY, stairwellWidth, stairwellHeight);
     
-    ctx.strokeStyle = '#1F2937';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#9CA3AF';
+    ctx.lineWidth = 2;
     ctx.strokeRect(stairwellX, stairwellY, stairwellWidth, stairwellHeight);
     
-    ctx.strokeStyle = '#6B7280';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#A1A1AA';
+    ctx.lineWidth = 1.5;
     const stepHeight = 15;
     for (let y = stairwellY; y < stairwellY + stairwellHeight; y += stepHeight) {
       ctx.beginPath();
@@ -358,6 +412,113 @@ const HabitatDesigner = () => {
     ctx.restore();
   };
 
+  const drawTopView = () => {
+    const canvas = topViewCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const TOP_CANVAS_SIZE = 500;
+    ctx.clearRect(0, 0, TOP_CANVAS_SIZE, TOP_CANVAS_SIZE);
+    
+    ctx.save();
+    
+    const scale = topViewZoom / 100;
+    const offsetX = TOP_CANVAS_SIZE / 2;
+    const offsetY = TOP_CANVAS_SIZE / 2;
+    
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+    ctx.translate(-offsetX + topViewPanX, -offsetY + topViewPanY);
+    
+    const centerX = TOP_CANVAS_SIZE / 2;
+    const centerY = TOP_CANVAS_SIZE / 2;
+    const radius = (dimensions.diameter / 2) * 40;
+    
+    ctx.fillStyle = '#E5E7EB';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    const stairwellRadius = (1 / 2) * 40;
+    ctx.fillStyle = '#D1D5DB';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, stairwellRadius, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#9CA3AF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    ctx.strokeStyle = '#A1A1AA';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 12; i++) {
+      const angle = (i * Math.PI) / 6;
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(
+        centerX + stairwellRadius * Math.cos(angle),
+        centerY + stairwellRadius * Math.sin(angle)
+      );
+      ctx.stroke();
+    }
+    
+    const modulesInSection = placedModules.filter(m => m.section === selectedTopViewSection);
+    
+    modulesInSection.forEach(module => {
+      const moduleWidth = (module.width || 1) * 40;
+      const moduleDepth = (module.depth || 1) * 40;
+      
+      const distanceFromCenter = (module.x + module.width / 2 - dimensions.diameter / 2) * 40;
+      const defaultX = centerX + distanceFromCenter;
+      const defaultY = centerY;
+      
+      const topPos = moduleTopPositions[module.id] || { x: defaultX, y: defaultY };
+      
+      ctx.fillStyle = module.color;
+      ctx.fillRect(topPos.x - moduleWidth/2, topPos.y - moduleDepth/2, moduleWidth, moduleDepth);
+      
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(topPos.x - moduleWidth/2, topPos.y - moduleDepth/2, moduleWidth, moduleDepth);
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(module.icon, topPos.x, topPos.y);
+    });
+    
+    if (draggedTopViewModule) {
+      const moduleWidth = (draggedTopViewModule.width || 1) * 40;
+      const moduleDepth = (draggedTopViewModule.depth || 1) * 40;
+      
+      ctx.fillStyle = draggedTopViewModule.color + '80';
+      ctx.fillRect(draggedTopViewModule.topX - moduleWidth/2, draggedTopViewModule.topY - moduleDepth/2, moduleWidth, moduleDepth);
+      
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(draggedTopViewModule.topX - moduleWidth/2, draggedTopViewModule.topY - moduleDepth/2, moduleWidth, moduleDepth);
+      
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(draggedTopViewModule.icon, draggedTopViewModule.topX, draggedTopViewModule.topY);
+    }
+    
+    ctx.fillStyle = '#1F2937';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(SECTION_NAMES[selectedTopViewSection], centerX, 30);
+    ctx.fillText(`Top View - Diameter: ${dimensions.diameter}m`, centerX, TOP_CANVAS_SIZE - 20);
+    
+    ctx.restore();
+  };
+
   const drawModule = (ctx, module, offsetX, offsetY, isDragging) => {
     const x = offsetX + module.x * SCALE;
     const y = offsetY + module.y * SCALE;
@@ -464,9 +625,143 @@ const HabitatDesigner = () => {
       setPlacedModules([...placedModules, moduleToPlace]);
       setDraggedModule(null);
     } else {
-      setErrorMessage(`❌ No space in ${SECTION_NAMES[moduleSection]}: ${validationResult.reason}`);
+      setErrorMessage(`No space in ${SECTION_NAMES[moduleSection]}: ${validationResult.reason}`);
       setDraggedModule(null);
     }
+  };
+
+  const handleTopViewMouseDown = (e) => {
+    const canvas = topViewCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const TOP_CANVAS_SIZE = 500;
+    const scale = topViewZoom / 100;
+    
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    
+    const offsetX = TOP_CANVAS_SIZE / 2;
+    const offsetY = TOP_CANVAS_SIZE / 2;
+    
+    const mouseX = (rawX - offsetX) / scale + offsetX - topViewPanX;
+    const mouseY = (rawY - offsetY) / scale + offsetY - topViewPanY;
+    
+    const centerX = TOP_CANVAS_SIZE / 2;
+    const centerY = TOP_CANVAS_SIZE / 2;
+    
+    const modulesInSection = placedModules.filter(m => m.section === selectedTopViewSection);
+    
+    const clickedModule = modulesInSection.find(module => {
+      const moduleWidth = (module.width || 1) * 40;
+      const moduleDepth = (module.depth || 1) * 40;
+      const distanceFromCenter = (module.x + module.width / 2 - dimensions.diameter / 2) * 40;
+      const defaultX = centerX + distanceFromCenter;
+      const defaultY = centerY;
+      
+      const topPos = moduleTopPositions[module.id] || { x: defaultX, y: defaultY };
+      
+      return mouseX >= topPos.x - moduleWidth/2 && 
+             mouseX <= topPos.x + moduleWidth/2 && 
+             mouseY >= topPos.y - moduleDepth/2 && 
+             mouseY <= topPos.y + moduleDepth/2;
+    });
+    
+    if (clickedModule) {
+      const topPos = moduleTopPositions[clickedModule.id] || { 
+        x: centerX + (clickedModule.x + clickedModule.width / 2 - dimensions.diameter / 2) * 40, 
+        y: centerY 
+      };
+      
+      setDraggedTopViewModule({
+        ...clickedModule, 
+        topX: topPos.x,
+        topY: topPos.y,
+        offsetX: mouseX - topPos.x, 
+        offsetY: mouseY - topPos.y
+      });
+      setPlacedModules(placedModules.filter(m => m.id !== clickedModule.id));
+    }
+  };
+
+  const handleTopViewMouseMove = (e) => {
+    if (!draggedTopViewModule) return;
+    
+    const canvas = topViewCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const TOP_CANVAS_SIZE = 500;
+    const scale = topViewZoom / 100;
+    
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
+    
+    const offsetX = TOP_CANVAS_SIZE / 2;
+    const offsetY = TOP_CANVAS_SIZE / 2;
+    
+    const mouseX = (rawX - offsetX) / scale + offsetX - topViewPanX;
+    const mouseY = (rawY - offsetY) / scale + offsetY - topViewPanY;
+    
+    const newTopX = mouseX - draggedTopViewModule.offsetX;
+    const newTopY = mouseY - draggedTopViewModule.offsetY;
+    
+    setDraggedTopViewModule({
+      ...draggedTopViewModule, 
+      topX: newTopX, 
+      topY: newTopY
+    });
+  };
+
+  const handleTopViewMouseUp = () => {
+    if (!draggedTopViewModule) return;
+    
+    const TOP_CANVAS_SIZE = 500;
+    const centerX = TOP_CANVAS_SIZE / 2;
+    const centerY = TOP_CANVAS_SIZE / 2;
+    const radius = (dimensions.diameter / 2) * 40;
+    
+    const moduleWidth = (draggedTopViewModule.width || 1) * 40;
+    const moduleDepth = (draggedTopViewModule.depth || 1) * 40;
+    
+    // Verificar las 4 esquinas del módulo
+    const corners = [
+      {x: draggedTopViewModule.topX - moduleWidth/2, y: draggedTopViewModule.topY - moduleDepth/2},
+      {x: draggedTopViewModule.topX + moduleWidth/2, y: draggedTopViewModule.topY - moduleDepth/2},
+      {x: draggedTopViewModule.topX - moduleWidth/2, y: draggedTopViewModule.topY + moduleDepth/2},
+      {x: draggedTopViewModule.topX + moduleWidth/2, y: draggedTopViewModule.topY + moduleDepth/2}
+    ];
+    
+    const allCornersInside = corners.every(corner => {
+      const dx = corner.x - centerX;
+      const dy = corner.y - centerY;
+      return Math.sqrt(dx * dx + dy * dy) <= radius;
+    });
+    
+    if (allCornersInside) {
+      // Calcular la nueva posición X del módulo basada en su posición en el Top View
+      const distanceFromCenter = draggedTopViewModule.topX - centerX;
+      const newX = (distanceFromCenter / 40) + (dimensions.diameter / 2) - (draggedTopViewModule.width / 2);
+      
+      const moduleToPlace = {
+        ...draggedTopViewModule, 
+        x: Math.max(0, Math.min(newX, dimensions.diameter - draggedTopViewModule.width)),
+        section: selectedTopViewSection
+      };
+      
+      // Guardar la posición en Top View
+      setModuleTopPositions({
+        ...moduleTopPositions,
+        [moduleToPlace.id]: { x: draggedTopViewModule.topX, y: draggedTopViewModule.topY }
+      });
+      
+      delete moduleToPlace.offsetX;
+      delete moduleToPlace.offsetY;
+      delete moduleToPlace.topX;
+      delete moduleToPlace.topY;
+      
+      setPlacedModules([...placedModules, moduleToPlace]);
+    } else {
+      setErrorMessage(`Module doesn't fit inside the circular habitat`);
+    }
+    
+    setDraggedTopViewModule(null);
   };
 
   const addModule = (moduleType) => {
@@ -486,7 +781,7 @@ const HabitatDesigner = () => {
     if (validationResult.canPlace) {
       setPlacedModules([...placedModules, newModule]);
     } else {
-      setErrorMessage(`❌ No space in ${SECTION_NAMES[targetSection]}: ${validationResult.reason}`);
+      setErrorMessage(`No space in ${SECTION_NAMES[targetSection]}: ${validationResult.reason}`);
     }
   };
 
@@ -516,6 +811,417 @@ const HabitatDesigner = () => {
     }
   };
 
+  const handleTopViewPan = (direction) => {
+    const panStep = 20;
+    switch(direction) {
+      case 'up':
+        setTopViewPanY(topViewPanY + panStep);
+        break;
+      case 'down':
+        setTopViewPanY(topViewPanY - panStep);
+        break;
+      case 'left':
+        setTopViewPanX(topViewPanX + panStep);
+        break;
+      case 'right':
+        setTopViewPanX(topViewPanX - panStep);
+        break;
+      case 'reset':
+        setTopViewPanX(0);
+        setTopViewPanY(0);
+        break;
+    }
+  };
+
+  const init3DView = () => {
+    if (!canvas3DRef.current) return;
+    
+    const THREE = window.THREE;
+    const width = 600;
+    const height = 500;
+    
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1e293b);
+    scene3DRef.current = scene;
+    
+    // Camera
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.set(15, 10, 15);
+    camera.lookAt(0, 5, 0);
+    camera3DRef.current = camera;
+    
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ 
+      canvas: canvas3DRef.current,
+      antialias: true 
+    });
+    renderer.setSize(width, height);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer3DRef.current = renderer;
+    
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(10, 20, 10);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.left = -20;
+    directionalLight.shadow.camera.right = 20;
+    directionalLight.shadow.camera.top = 20;
+    directionalLight.shadow.camera.bottom = -20;
+    scene.add(directionalLight);
+    
+    // Ground
+    const groundGeometry = new THREE.PlaneGeometry(50, 50);
+    const groundMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x8B4513,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+    
+    // Grid
+    const gridHelper = new THREE.GridHelper(50, 50, 0x666666, 0x444444);
+    scene.add(gridHelper);
+    
+    render3DView();
+  };
+
+  const render3DView = () => {
+    if (!scene3DRef.current || !camera3DRef.current || !renderer3DRef.current) return;
+    
+    const THREE = window.THREE;
+    const scene = scene3DRef.current;
+    const camera = camera3DRef.current;
+    const renderer = renderer3DRef.current;
+    
+    // Clear previous habitat objects
+    const objectsToRemove = [];
+    scene.children.forEach(child => {
+      if (child.userData.isHabitat) {
+        objectsToRemove.push(child);
+      }
+    });
+    objectsToRemove.forEach(obj => scene.remove(obj));
+    
+    // Cylinder dimensions
+    const cylRadius = dimensions.diameter / 2;
+    const cylHeight = dimensions.length;
+    const groundClearance = 1; // 1 metro del suelo
+    
+    // Main cylinder - metallic white with panels
+    const cylinderGeometry = new THREE.CylinderGeometry(cylRadius, cylRadius, cylHeight, 32);
+    const cylinderMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xf5f5f5,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+    cylinder.position.y = groundClearance + cylHeight / 2;
+    cylinder.castShadow = true;
+    cylinder.receiveShadow = true;
+    cylinder.userData.isHabitat = true;
+    scene.add(cylinder);
+    
+    // Horizontal panel lines on cylinder
+    const panelLineMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xd0d0d0,
+      metalness: 0.9,
+      roughness: 0.1
+    });
+    
+    const numPanels = Math.floor(cylHeight / 1.4);
+    for (let i = 0; i < numPanels; i++) {
+      const ringGeometry = new THREE.TorusGeometry(cylRadius + 0.02, 0.04, 8, 32);
+      const ring = new THREE.Mesh(ringGeometry, panelLineMaterial);
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = groundClearance + (i + 1) * (cylHeight / (numPanels + 1));
+      ring.userData.isHabitat = true;
+      scene.add(ring);
+    }
+    
+    // Vertical panel lines
+    const numVerticalPanels = 8;
+    for (let i = 0; i < numVerticalPanels; i++) {
+      const angle = (i * Math.PI * 2) / numVerticalPanels;
+      const x = Math.cos(angle) * cylRadius;
+      const z = Math.sin(angle) * cylRadius;
+      
+      const lineGeometry = new THREE.BoxGeometry(0.06, cylHeight, 0.06);
+      const line = new THREE.Mesh(lineGeometry, panelLineMaterial);
+      line.position.set(x, groundClearance + cylHeight / 2, z);
+      line.userData.isHabitat = true;
+      scene.add(line);
+    }
+    
+    // Hatch/Airlock at bottom side - door design
+    const hatchMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xffffff,
+      metalness: 0.6,
+      roughness: 0.3
+    });
+    
+    // Hatch door (rectangular with rounded top)
+    const hatchWidth = 1;
+    const hatchHeight = 1.8;
+    const hatchDepth = 0.12;
+    
+    // Main door panel
+    const doorGeometry = new THREE.BoxGeometry(hatchWidth, hatchHeight, hatchDepth);
+    const door = new THREE.Mesh(doorGeometry, hatchMaterial);
+    door.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2, 0);
+    door.userData.isHabitat = true;
+    scene.add(door);
+    
+    // Door frame
+    const frameMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xf5f5f5,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    
+    // Top frame
+    const topFrameGeometry = new THREE.BoxGeometry(hatchWidth + 0.15, 0.1, hatchDepth + 0.05);
+    const topFrame = new THREE.Mesh(topFrameGeometry, frameMaterial);
+    topFrame.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2 + hatchHeight/2 + 0.05, 0);
+    topFrame.userData.isHabitat = true;
+    scene.add(topFrame);
+    
+    // Bottom frame
+    const bottomFrame = new THREE.Mesh(topFrameGeometry, frameMaterial);
+    bottomFrame.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2 - hatchHeight/2 - 0.05, 0);
+    bottomFrame.userData.isHabitat = true;
+    scene.add(bottomFrame);
+    
+    // Left frame
+    const sideFrameGeometry = new THREE.BoxGeometry(0.1, hatchHeight + 0.2, hatchDepth + 0.05);
+    const leftFrame = new THREE.Mesh(sideFrameGeometry, frameMaterial);
+    leftFrame.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2, -hatchWidth/2 - 0.05);
+    leftFrame.userData.isHabitat = true;
+    scene.add(leftFrame);
+    
+    // Right frame
+    const rightFrame = new THREE.Mesh(sideFrameGeometry, frameMaterial);
+    rightFrame.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2, hatchWidth/2 + 0.05);
+    rightFrame.userData.isHabitat = true;
+    scene.add(rightFrame);
+    
+    // Door window (rectangular)
+    const windowMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x333333,
+      metalness: 0.1,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.4
+    });
+    const windowGeometry = new THREE.BoxGeometry(0.5, 0.6, 0.13);
+    const doorWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+    doorWindow.position.set(cylRadius + hatchDepth/2, groundClearance + 1.2 + 0.4, 0);
+    doorWindow.userData.isHabitat = true;
+    scene.add(doorWindow);
+    
+    // Door handle
+    const handleGeometry = new THREE.BoxGeometry(0.08, 0.3, 0.08);
+    const handle = new THREE.Mesh(handleGeometry, frameMaterial);
+    handle.position.set(cylRadius + hatchDepth/2 + 0.08, groundClearance + 1.2, 0.3);
+    handle.userData.isHabitat = true;
+    scene.add(handle);
+    
+    // Small platform/steps near hatch
+    const platformGeometry = new THREE.BoxGeometry(0.8, 0.08, 1.2);
+    const platformMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xfafafa,
+      metalness: 0.5,
+      roughness: 0.4
+    });
+    const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+    platform.position.set(cylRadius + 0.5, groundClearance + 0.3, 0);
+    platform.userData.isHabitat = true;
+    scene.add(platform);
+    
+    // Steps
+    const stepGeometry = new THREE.BoxGeometry(0.6, 0.05, 0.35);
+    const step1 = new THREE.Mesh(stepGeometry, platformMaterial);
+    step1.position.set(cylRadius + 0.6, groundClearance + 0.15, 0);
+    step1.userData.isHabitat = true;
+    scene.add(step1);
+    
+    // Top dome
+    const topDomeGeometry = new THREE.SphereGeometry(cylRadius, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const topDome = new THREE.Mesh(topDomeGeometry, cylinderMaterial);
+    topDome.position.y = groundClearance + cylHeight;
+    topDome.castShadow = true;
+    topDome.receiveShadow = true;
+    topDome.userData.isHabitat = true;
+    scene.add(topDome);
+    
+    // Landing gear - 3 legs
+    const legMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x555555,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    
+    const legPositions = [
+      { angle: 0 },
+      { angle: (Math.PI * 2) / 3 },
+      { angle: (Math.PI * 4) / 3 }
+    ];
+    
+    legPositions.forEach(pos => {
+      const legGroup = new THREE.Group();
+      legGroup.userData.isHabitat = true;
+      
+      // Main leg strut
+      const legGeometry = new THREE.CylinderGeometry(0.1, 0.15, groundClearance + 0.5, 8);
+      const leg = new THREE.Mesh(legGeometry, legMaterial);
+      leg.position.y = (groundClearance + 0.5) / 2;
+      legGroup.add(leg);
+      
+      // Foot pad
+      const footGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+      const foot = new THREE.Mesh(footGeometry, legMaterial);
+      foot.position.y = 0.05;
+      legGroup.add(foot);
+      
+      // Position leg around cylinder
+      const x = Math.cos(pos.angle) * (cylRadius - 0.5);
+      const z = Math.sin(pos.angle) * (cylRadius - 0.5);
+      legGroup.position.set(x, 0, z);
+      
+      // Tilt leg outward slightly
+      const tiltAngle = Math.atan2(z, x);
+      legGroup.rotation.z = Math.cos(tiltAngle) * 0.1;
+      legGroup.rotation.x = Math.sin(tiltAngle) * 0.1;
+      
+      scene.add(legGroup);
+    });
+    
+    // Thrusters at bottom
+    const thrusterMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x4a5568,
+      metalness: 0.9,
+      roughness: 0.1
+    });
+    
+    const thrusterPositions = [
+      { angle: Math.PI / 6 },
+      { angle: Math.PI / 2 },
+      { angle: (5 * Math.PI) / 6 },
+      { angle: (7 * Math.PI) / 6 },
+      { angle: (3 * Math.PI) / 2 },
+      { angle: (11 * Math.PI) / 6 }
+    ];
+    
+    thrusterPositions.forEach(pos => {
+      const thrusterGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.8, 8);
+      const thruster = new THREE.Mesh(thrusterGeometry, thrusterMaterial);
+      const x = Math.cos(pos.angle) * (cylRadius - 0.3);
+      const z = Math.sin(pos.angle) * (cylRadius - 0.3);
+      thruster.position.set(x, groundClearance + 0.4, z);
+      thruster.castShadow = true;
+      thruster.userData.isHabitat = true;
+      scene.add(thruster);
+      
+      // Nozzle
+      const nozzleGeometry = new THREE.CylinderGeometry(0.25, 0.15, 0.3, 8);
+      const nozzleMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2d3748,
+        metalness: 0.9,
+        roughness: 0.1
+      });
+      const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+      nozzle.position.set(x, groundClearance + 0.05, z);
+      nozzle.userData.isHabitat = true;
+      scene.add(nozzle);
+    });
+    
+    // Solar panels
+    const panelMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x1e3a8a,
+      metalness: 0.5,
+      roughness: 0.3
+    });
+    
+    const panelGeometry = new THREE.BoxGeometry(4, 2, 0.1);
+    
+    // Left panel
+    const leftPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+    leftPanel.position.set(-cylRadius - 2.5, groundClearance + cylHeight / 2, 0);
+    leftPanel.rotation.y = Math.PI / 2;
+    leftPanel.castShadow = true;
+    leftPanel.userData.isHabitat = true;
+    scene.add(leftPanel);
+    
+    // Left arm
+    const armGeometry = new THREE.CylinderGeometry(0.08, 0.08, 2, 8);
+    const armMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x555555,
+      metalness: 0.8,
+      roughness: 0.2
+    });
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    leftArm.position.set(-cylRadius - 1, groundClearance + cylHeight / 2, 0);
+    leftArm.rotation.z = Math.PI / 2;
+    leftArm.userData.isHabitat = true;
+    scene.add(leftArm);
+    
+    // Right panel
+    const rightPanel = new THREE.Mesh(panelGeometry, panelMaterial);
+    rightPanel.position.set(cylRadius + 2.5, groundClearance + cylHeight / 2, 0);
+    rightPanel.rotation.y = Math.PI / 2;
+    rightPanel.castShadow = true;
+    rightPanel.userData.isHabitat = true;
+    scene.add(rightPanel);
+    
+    // Right arm
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+    rightArm.position.set(cylRadius + 1, groundClearance + cylHeight / 2, 0);
+    rightArm.rotation.z = Math.PI / 2;
+    rightArm.userData.isHabitat = true;
+    scene.add(rightArm);
+    
+    // Update camera position based on rotation
+    const radius = 20;
+    camera.position.x = radius * Math.sin(camera3DRotation.theta) * Math.cos(camera3DRotation.phi);
+    camera.position.y = radius * Math.sin(camera3DRotation.phi);
+    camera.position.z = radius * Math.cos(camera3DRotation.theta) * Math.cos(camera3DRotation.phi);
+    camera.lookAt(0, groundClearance + cylHeight / 2, 0);
+    
+    renderer.render(scene, camera);
+  };
+
+  const handle3DMouseDown = (e) => {
+    setMouseDown3D(true);
+    setMouse3DPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handle3DMouseMove = (e) => {
+    if (!mouseDown3D) return;
+    
+    const deltaX = e.clientX - mouse3DPos.x;
+    const deltaY = e.clientY - mouse3DPos.y;
+    
+    setCamera3DRotation(prev => ({
+      theta: prev.theta - deltaX * 0.01,
+      phi: Math.max(0.1, Math.min(Math.PI - 0.1, prev.phi - deltaY * 0.01))
+    }));
+    
+    setMouse3DPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handle3DMouseUp = () => {
+    setMouseDown3D(false);
+  };
+
   const validateDesign = () => {
     const issues = [];
     
@@ -542,12 +1248,22 @@ const HabitatDesigner = () => {
     const hasGalley = placedModules.some(m => m.id.startsWith('cocina'));
     const hasBathroom = placedModules.some(m => m.id.startsWith('bano'));
     const hasSleepingQuarter = placedModules.some(m => m.id.startsWith('cama'));
+    const hasOperations = placedModules.some(m => m.id.startsWith('operaciones'));
     const hasLifeSupport = placedModules.some(m => m.id.startsWith('soporte-vital'));
+    const hasFuelTank = placedModules.some(m => m.id.startsWith('combustible'));
+    const hasOxidizerTank = placedModules.some(m => m.id.startsWith('oxidante'));
+    const hasWaterStorage = placedModules.some(m => m.id.startsWith('agua'));
+    const hasWasteStorage = placedModules.some(m => m.id.startsWith('residuos'));
     
-    if (!hasGalley) issues.push({ type: 'warning', msg: 'Missing galley module' });
-    if (!hasBathroom) issues.push({ type: 'warning', msg: 'Missing bathroom module' });
-    if (!hasSleepingQuarter) issues.push({ type: 'warning', msg: 'Missing sleeping quarter module' });
-    if (!hasLifeSupport) issues.push({ type: 'warning', msg: 'Missing life support module' });
+    if (!hasGalley) issues.push({ type: 'warning', msg: 'Missing required module: Galley' });
+    if (!hasBathroom) issues.push({ type: 'warning', msg: 'Missing required module: Bathroom' });
+    if (!hasSleepingQuarter) issues.push({ type: 'warning', msg: 'Missing required module: Sleeping Quarter' });
+    if (!hasOperations) issues.push({ type: 'warning', msg: 'Missing required module: Operations Area' });
+    if (!hasLifeSupport) issues.push({ type: 'warning', msg: 'Missing required module: Life Support' });
+    if (!hasFuelTank) issues.push({ type: 'warning', msg: 'Missing required module: Fuel Tank' });
+    if (!hasOxidizerTank) issues.push({ type: 'warning', msg: 'Missing required module: Oxidizer Tank' });
+    if (!hasWaterStorage) issues.push({ type: 'warning', msg: 'Missing required module: Water Storage' });
+    if (!hasWasteStorage) issues.push({ type: 'warning', msg: 'Missing required module: Waste Storage' });
     
     setValidationIssues(issues);
   };
@@ -574,7 +1290,7 @@ const HabitatDesigner = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              ⚙️ Configuration
+              Configuration
             </h2>
             
             <div className="space-y-4">
@@ -680,7 +1396,7 @@ const HabitatDesigner = () => {
             )}
 
             <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
-              <h2 className="text-xl font-bold mb-4">📦 Available Modules</h2>
+              <h2 className="text-xl font-bold mb-4">Available Modules</h2>
               
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Add modules to:</label>
@@ -720,7 +1436,10 @@ const HabitatDesigner = () => {
                       {module.depth && <div className="text-xs text-slate-500">D:{module.depth}m</div>}
                     </div>
                     {module.serviceOnly && (
-                      <div className="text-xs text-orange-400 font-semibold">⚠️</div>
+                      <div className="text-xs text-orange-400 font-semibold">Service</div>
+                    )}
+                    {module.optional && (
+                      <div className="text-xs text-green-400 font-semibold">Optional</div>
                     )}
                   </button>
                 ))}
@@ -760,7 +1479,7 @@ const HabitatDesigner = () => {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    🏗️ 2D Profile View
+                    2D Profile View
                   </h2>
                   <div className="flex items-center gap-3">
                     <button
@@ -853,14 +1572,156 @@ const HabitatDesigner = () => {
               </div>
               <p className="text-sm text-slate-400 mt-2 text-center">
                 <Move size={14} className="inline mr-1" />
-                Drag modules | Modules can overlap (different depths) | Zoom +/− | Arrows to navigate
+                Drag modules - Modules can overlap (different depths) - Zoom +/− - Arrows to navigate
               </p>
             </div>
 
             <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
-              <h2 className="text-xl font-bold mb-4">📊 Design Validation</h2>
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    Top View (Circular Cross-Section)
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setTopViewZoom(Math.max(10, topViewZoom - 10))}
+                      className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded transition"
+                      disabled={topViewZoom <= 10}
+                    >
+                      −
+                    </button>
+                    <span className="text-sm font-semibold min-w-[60px] text-center">
+                      {topViewZoom}%
+                    </span>
+                    <button
+                      onClick={() => setTopViewZoom(Math.min(200, topViewZoom + 10))}
+                      className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded transition"
+                      disabled={topViewZoom >= 200}
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => setTopViewZoom(100)}
+                      className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded transition text-sm"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="200"
+                  step="10"
+                  value={topViewZoom}
+                  onChange={(e) => setTopViewZoom(parseInt(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Section to View:</label>
+                <div className="flex gap-2">
+                  {Array.from({ length: SECTIONS }, (_, i) => i).map(section => (
+                    <button
+                      key={section}
+                      onClick={() => setSelectedTopViewSection(section)}
+                      className={`flex-1 p-3 rounded transition ${
+                        selectedTopViewSection === section
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 hover:bg-slate-600'
+                      }`}
+                    >
+                      {SECTION_NAMES[section]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-lg p-4 flex justify-center relative">
+                <canvas
+                  ref={topViewCanvasRef}
+                  width={500}
+                  height={500}
+                  onMouseDown={handleTopViewMouseDown}
+                  onMouseMove={handleTopViewMouseMove}
+                  onMouseUp={handleTopViewMouseUp}
+                  onMouseLeave={handleTopViewMouseUp}
+                  className="border border-slate-700 rounded cursor-move"
+                />
+                
+                <div className="absolute bottom-4 left-4 bg-slate-800 bg-opacity-70 backdrop-blur-sm rounded-lg p-2 shadow-lg">
+                  <div className="grid grid-cols-3 gap-1" style={{ width: '80px' }}>
+                    <div></div>
+                    <button
+                      onClick={() => handleTopViewPan('up')}
+                      className="p-1 bg-slate-700 bg-opacity-80 hover:bg-slate-600 rounded transition flex items-center justify-center text-xs"
+                    >
+                      ▲
+                    </button>
+                    <div></div>
+                    <button
+                      onClick={() => handleTopViewPan('left')}
+                      className="p-1 bg-slate-700 bg-opacity-80 hover:bg-slate-600 rounded transition flex items-center justify-center text-xs"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      onClick={() => handleTopViewPan('reset')}
+                      className="p-1 bg-blue-600 bg-opacity-80 hover:bg-blue-500 rounded transition text-xs"
+                      title="Center view"
+                    >
+                      ⊙
+                    </button>
+                    <button
+                      onClick={() => handleTopViewPan('right')}
+                      className="p-1 bg-slate-700 bg-opacity-80 hover:bg-slate-600 rounded transition flex items-center justify-center text-xs"
+                    >
+                      ▶
+                    </button>
+                    <div></div>
+                    <button
+                      onClick={() => handleTopViewPan('down')}
+                      className="p-1 bg-slate-700 bg-opacity-80 hover:bg-slate-600 rounded transition flex items-center justify-center text-xs"
+                    >
+                      ▼
+                    </button>
+                    <div></div>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-slate-400 mt-2 text-center">
+                <Move size={14} className="inline mr-1" />
+                Drag modules to reposition - Zoom +/− - Arrows to navigate
+              </p>
+            </div>
+
+            <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                3D External Preview
+              </h2>
+              
+              <div className="bg-slate-900 rounded-lg p-4 flex justify-center">
+                <canvas
+                  ref={canvas3DRef}
+                  width={600}
+                  height={500}
+                  onMouseDown={handle3DMouseDown}
+                  onMouseMove={handle3DMouseMove}
+                  onMouseUp={handle3DMouseUp}
+                  onMouseLeave={handle3DMouseUp}
+                  className="border border-slate-700 rounded cursor-grab active:cursor-grabbing"
+                />
+              </div>
+              <p className="text-sm text-slate-400 mt-2 text-center">
+                Drag to rotate the view - Exterior structure only
+              </p>
+            </div>
+
+            <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
+              <h2 className="text-xl font-bold mb-4">Design Validation</h2>
               <div className="mb-3 p-3 bg-blue-900 bg-opacity-30 border border-blue-500 rounded text-xs text-blue-200">
-                ℹ️ Modules can overlap in 2D view as they are at different depths within the circular cylinder
+                Modules can overlap in 2D view as they are at different depths within the circular cylinder. The central stairwell (1m diameter, shown in light gray) connects all sections.
               </div>
               <div className="space-y-2">
                 {validationIssues.length === 0 ? (
@@ -880,7 +1741,7 @@ const HabitatDesigner = () => {
 
         <div className="mt-6 bg-slate-800 rounded-lg p-6 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            📊 Habitat Statistics
+            Habitat Statistics
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

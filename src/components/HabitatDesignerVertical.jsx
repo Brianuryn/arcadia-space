@@ -334,10 +334,10 @@ const HabitatDesignerB = () => {
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-900 to-purple-900 border-b-4 border-cyan-500 py-4">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-            Arkadia Space
+          <h1 className="text-3xl md:text-4xl font-bold bg-red-500 bg-clip-text text-transparent">
+            ⚠️ This is an incomplete version, please use "Habitat Design"!
           </h1>
-          <p className="text-blue-200 mt-2">Habitat Designer</p>
+          <p className="text-blue-200 mt-2">Module values ​​may be incorrect</p>
         </div>
       </header>
 
