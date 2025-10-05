@@ -22,7 +22,7 @@ function Navbar() {
       <ul className="navbar-links">
         <li><a href="/">Inicio</a></li>
         <li><Link to="/habitat-designer">Diseñador de Hábitats</Link></li>
-        <li><a href="#">Contacto</a></li>
+        <li><Link to="/bio-arkadia">BioArkadia</Link></li>
       </ul>
     </nav>
   );

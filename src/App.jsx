@@ -2,7 +2,8 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
-import HabitatDesigner from './pages/HabitatDesigner';
+import BioArkadia from "./pages/BioArkadia";
+import HabitatDesigner from './components/HabitatDesigner/HabitatDesigner';
 import Footer from "./components/Footer";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/habitat-designer" element={<HabitatDesigner />} />
+        <Route path="/bio-arkadia" element={<BioArkadia />} />
       </Routes>
       <Footer />
     </Router>

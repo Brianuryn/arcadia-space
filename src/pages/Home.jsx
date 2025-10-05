@@ -1,6 +1,6 @@
 import React from "react";
 import "../styles/Home.css";
-import HabitatDesigner from '../pages/HabitatDesigner';
+import HabitatDesigner from '../components/HabitatDesigner/HabitatDesigner.jsx';
 
 function Home() {
   return (
