@@ -20,7 +20,7 @@ function Navbar() {
       </div>
 
       <ul className="navbar-links">
-        <li><a href="/">Inicio</a></li>
+        <li><Link to="/">Inicio</Link></li>
         <li><Link to="/habitat-designer">Diseñador de Hábitats</Link></li>
         <li><Link to="/bio-arkadia">BioArkadia</Link></li>
       </ul>
