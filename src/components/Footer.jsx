@@ -4,7 +4,7 @@ import "../styles/Footer.css";
 function Footer() {
   return (
     <footer className="footer">
-      <p>© {new Date().getFullYear()} Arkadia Space — Todos los derechos reservados.</p>
+      <p>© {new Date().getFullYear()} Arkadia Space — All rights reserved.</p>
     </footer>
   );
 }
