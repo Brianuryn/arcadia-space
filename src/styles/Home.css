@@ -1,0 +1,30 @@
+.home-container {
+  background-image: url("../resources/background.jpeg");
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: calc(100vh - 120px); /* navbar + footer */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 100vh;
+}
+
+.home-content {
+  background-color: rgba(13, 17, 23, 0.7);
+  padding: 40px 60px;
+  border-radius: 12px;
+  color: white;
+}
+
+.home-content h1 {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.home-content p {
+  font-size: 1.2rem;
+  color: #c9d1d9;
+}

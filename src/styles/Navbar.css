@@ -1,0 +1,98 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 30px;
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 10, 25, 0.85) 60%,
+    rgba(10, 10, 25, 0.2) 100%
+  );
+  backdrop-filter: blur(4px);
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+.navbar img {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.navbar h1 {
+  margin-left: 10px;
+  font-size: 1.5rem;
+  color: white;
+  font-family: 'Orbitron', sans-serif;
+  user-select: none;
+}
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navbar-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.1);
+}
+
+.navbar-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(150, 200, 255, 0.8);
+}
+
+.navbar-links {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #c9d1d9;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.navbar-links a:hover {
+  color: #58a6ff;
+}
+
+
+/* Colores locos
+.navbar-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #58a6ff, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: gradientMove 3s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% center;
+  }
+  50% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+*/
