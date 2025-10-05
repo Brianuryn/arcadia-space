@@ -2,10 +2,10 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
-import BioArkadia from "./pages/BioArkadia";
 import HabitatDesigner from './components/HabitatDesigner';
 import HabitatDesignerB from './components/HabitatDesignerVertical';
 import Footer from "./components/Footer";
+import BioArkadia from './components/CalculadoraBio';
 
 function App() {
   return (

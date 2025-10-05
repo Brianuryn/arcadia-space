@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle, Move, Info } from 'lucide-react';
 const HabitatDesigner = () => {
   const [habitatType, setHabitatType] = useState('cilindro-vertical');
   const [crewSize, setCrewSize] = useState(4);
-  const [dimensions, setDimensions] = useState({ length: 7.5, diameter: 5 });
+  const [dimensions, setDimensions] = useState({ length: 8.4, diameter: 5 });
   const [placedModules, setPlacedModules] = useState([]);
   const [draggedModule, setDraggedModule] = useState(null);
   const [validationIssues, setValidationIssues] = useState([]);
@@ -19,27 +19,31 @@ const HabitatDesigner = () => {
   const CANVAS_WIDTH = 600;
   const CANVAS_HEIGHT = 500;
   const TERRAIN_Y = 420;
-  const SECTION_HEIGHT = 2.5;
+  const SECTION_HEIGHT = 2.8;
   const SECTIONS = crewSize <= 3 ? 2 : 3;
   const SECTION_NAMES = crewSize <= 3 
-    ? ['Área Habitable', 'Área de Servicio']
-    : ['Área Habitable', 'Área Habitable', 'Área de Servicio'];
+    ? ['Habitable Area', 'Service Area']
+    : ['Upper Habitable Area', 'Lower Habitable Area', 'Service Area'];
 
   const habitatTypes = [
-    { id: 'cilindro-vertical', name: 'Cilindro Vertical', locked: false },
-    { id: 'cilindro-horizontal', name: 'Cilindro Horizontal', locked: true },
-    { id: 'domo', name: 'Domo Inflable', locked: true },
-    { id: 'regolito', name: 'Regolito Impreso', locked: true }
+    { id: 'cilindro-vertical', name: 'Vertical Cylinder', locked: false },
+    { id: 'cilindro-horizontal', name: 'Horizontal Cylinder', locked: true },
+    { id: 'domo', name: 'Inflatable Dome', locked: true },
+    { id: 'regolito', name: 'Printed Regolith', locked: true }
   ];
 
   const availableModules = [
-    { id: 'cama', name: 'Cama', width: 1, length: 2, color: '#3B82F6', icon: '🛏️' },
-    { id: 'cocina', name: 'Cocina', width: 2, length: 2, color: '#EF4444', icon: '🍳' },
-    { id: 'bano', name: 'Baño', width: 1, length: 1, color: '#10B981', icon: '🚿' },
-    { id: 'trabajo', name: 'Área de Trabajo', width: 2, length: 2, color: '#F59E0B', icon: '💻' },
-    { id: 'almacen', name: 'Almacenamiento', width: 1.5, length: 1, color: '#8B5CF6', icon: '📦' },
-    { id: 'laboratorio', name: 'Laboratorio', width: 2.5, length: 2, color: '#EC4899', icon: '🔬' },
-    { id: 'pasillo', name: 'Pasillo', width: 0.8, length: 2, color: '#6B7280', icon: '↔️' }
+    { id: 'cama', name: 'Sleeping Quarter', width: 0.76, length: 2, depth: 1.2, color: '#3B82F6', icon: '🛏️', weight: 50, serviceOnly: false },
+    { id: 'cocina', name: 'Galley', width: 2.4, length: 2, depth: 1.6, color: '#EF4444', icon: '🍳', weight: 200, serviceOnly: false },
+    { id: 'bano', name: 'Bathroom', width: 1.2, length: 2, depth: 1.6, color: '#10B981', icon: '🚿', weight: 150, serviceOnly: false },
+    { id: 'operaciones', name: 'Operations Area', width: 3, length: 2.2, depth: 1.8, color: '#F59E0B', icon: '💻', weight: 120, serviceOnly: false },
+    { id: 'laboratorio', name: 'Laboratory', width: 3, length: 2.1, depth: 1.8, color: '#EC4899', icon: '🔬', weight: 300, serviceOnly: false },
+    { id: 'invernadero', name: 'Greenhouse', width: 3.5, length: 2.2, depth: 2.2, color: '#22C55E', icon: '🌱', weight: 250, serviceOnly: false },
+    { id: 'combustible', name: 'Fuel Tank', width: 1.5, length: 2, depth: 1.5, color: '#DC2626', icon: '⛽', weight: 400, serviceOnly: true },
+    { id: 'oxidante', name: 'Oxidizer Tank', width: 1.5, length: 2, depth: 1.5, color: '#F97316', icon: '🧪', weight: 400, serviceOnly: true },
+    { id: 'soporte-vital', name: 'Life Support', width: 2, length: 2.5, depth: 1.8, color: '#06B6D4', icon: '💨', weight: 500, serviceOnly: true },
+    { id: 'agua', name: 'Water Storage', width: 2, length: 2.2, depth: 2, color: '#3B82F6', icon: '💧', weight: 600, serviceOnly: true },
+    { id: 'residuos', name: 'Waste Storage', width: 1.5, length: 1.8, depth: 1.5, color: '#78716C', icon: '🚽', weight: 300, serviceOnly: true }
   ];
 
   useEffect(() => {
@@ -58,7 +62,7 @@ const HabitatDesigner = () => {
   }, [errorMessage]);
 
   useEffect(() => {
-    const newLength = crewSize <= 3 ? 5 : 7.5;
+    const newLength = crewSize <= 3 ? 5.6 : 8.4;
     setDimensions(prev => ({ ...prev, length: newLength }));
     setPlacedModules([]);
     setSelectedSection(null);
@@ -77,22 +81,19 @@ const HabitatDesigner = () => {
   };
 
   const canPlaceModule = (module, section) => {
-    const cylHeight = dimensions.length * SCALE;
-    const sectionHeight = (cylHeight - 20) / SECTIONS;
-    const sectionStartY = (section * sectionHeight) / SCALE;
-    const sectionEndY = ((section + 1) * sectionHeight) / SCALE;
+    if (module.serviceOnly && section !== SECTIONS - 1) {
+      return { canPlace: false, reason: 'This module can only be placed in the Service Area' };
+    }
+
+    const sectionStartY = section * SECTION_HEIGHT;
+    const sectionEndY = (section + 1) * SECTION_HEIGHT;
 
     if (module.x < 0 || module.x + module.width > dimensions.diameter) {
-      return { canPlace: false, reason: 'El módulo excede el ancho del hábitat' };
+      return { canPlace: false, reason: 'Module exceeds habitat width' };
     }
 
     if (module.y < sectionStartY || module.y + module.length > sectionEndY) {
-      return { canPlace: false, reason: 'El módulo no cabe en la sección (excede 2.5m de alto)' };
-    }
-
-    const modulesInSection = placedModules.filter(m => m.section === section && m.id !== module.id);
-    if (checkCollision(module, modulesInSection)) {
-      return { canPlace: false, reason: 'El módulo se superpone con otro módulo' };
+      return { canPlace: false, reason: 'Module doesn\'t fit in section (exceeds 2.8m height)' };
     }
 
     return { canPlace: true };
@@ -104,11 +105,8 @@ const HabitatDesigner = () => {
     const ctx = canvas.getContext('2d');
     
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    
-    // Guardar el contexto antes de aplicar transformaciones
     ctx.save();
     
-    // Aplicar zoom desde el centro del canvas
     const scale = zoomLevel / 100;
     const offsetX = CANVAS_WIDTH / 2;
     const offsetY = CANVAS_HEIGHT / 2;
@@ -149,8 +147,8 @@ const HabitatDesigner = () => {
     
     ctx.fillRect(cylX + cylWidth + legWidth - 5, cylY + cylHeight + legHeight, 10, 3);
     
-    const thrusterWidth = 20;
-    const thrusterHeight = 30;
+    const thrusterWidth = 25;
+    const thrusterHeight = 35;
     const thrusterSpacing = cylWidth / 4;
     
     const thrusterPositions = [
@@ -160,25 +158,40 @@ const HabitatDesigner = () => {
     ];
     
     thrusterPositions.forEach(thrusterX => {
+      const thrusterCenterX = thrusterX + thrusterWidth / 2;
+      const thrusterTop = cylY + cylHeight;
+      const thrusterBottom = cylY + cylHeight + thrusterHeight;
+      
       ctx.fillStyle = '#6B7280';
-      ctx.fillRect(thrusterX, cylY + cylHeight, thrusterWidth, thrusterHeight);
+      ctx.beginPath();
+      ctx.moveTo(thrusterX, thrusterTop);
+      ctx.lineTo(thrusterX + thrusterWidth, thrusterTop);
+      ctx.lineTo(thrusterCenterX + thrusterWidth * 0.3, thrusterBottom);
+      ctx.lineTo(thrusterCenterX - thrusterWidth * 0.3, thrusterBottom);
+      ctx.closePath();
+      ctx.fill();
       
       ctx.strokeStyle = '#374151';
       ctx.lineWidth = 2;
-      ctx.strokeRect(thrusterX, cylY + cylHeight, thrusterWidth, thrusterHeight);
+      ctx.stroke();
       
       ctx.fillStyle = '#1F2937';
       ctx.beginPath();
-      ctx.ellipse(thrusterX + thrusterWidth / 2, cylY + cylHeight + thrusterHeight, 
-                  thrusterWidth / 2, 5, 0, 0, 2 * Math.PI);
+      ctx.moveTo(thrusterCenterX - thrusterWidth * 0.25, thrusterBottom - 5);
+      ctx.lineTo(thrusterCenterX + thrusterWidth * 0.25, thrusterBottom - 5);
+      ctx.lineTo(thrusterCenterX + thrusterWidth * 0.2, thrusterBottom);
+      ctx.lineTo(thrusterCenterX - thrusterWidth * 0.2, thrusterBottom);
+      ctx.closePath();
       ctx.fill();
       
       for (let i = 1; i <= 2; i++) {
+        const ringY = thrusterTop + (thrusterHeight / 3) * i;
+        const ringWidth = thrusterWidth * (1 - (i * 0.15));
         ctx.strokeStyle = '#9CA3AF';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(thrusterX, cylY + cylHeight + (thrusterHeight / 3) * i);
-        ctx.lineTo(thrusterX + thrusterWidth, cylY + cylHeight + (thrusterHeight / 3) * i);
+        ctx.moveTo(thrusterCenterX - ringWidth / 2, ringY);
+        ctx.lineTo(thrusterCenterX + ringWidth / 2, ringY);
         ctx.stroke();
       }
     });
@@ -208,13 +221,35 @@ const HabitatDesigner = () => {
       ctx.stroke();
     }
     
+    const stairwellWidth = 1 * SCALE;
+    const stairwellX = cylX + (cylWidth - stairwellWidth) / 2;
+    const stairwellY = cylY + 20;
+    const stairwellHeight = cylHeight - 20;
+    
+    ctx.fillStyle = '#4B5563';
+    ctx.fillRect(stairwellX, stairwellY, stairwellWidth, stairwellHeight);
+    
+    ctx.strokeStyle = '#1F2937';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(stairwellX, stairwellY, stairwellWidth, stairwellHeight);
+    
+    ctx.strokeStyle = '#6B7280';
+    ctx.lineWidth = 2;
+    const stepHeight = 15;
+    for (let y = stairwellY; y < stairwellY + stairwellHeight; y += stepHeight) {
+      ctx.beginPath();
+      ctx.moveTo(stairwellX, y);
+      ctx.lineTo(stairwellX + stairwellWidth, y);
+      ctx.stroke();
+    }
+    
     ctx.fillStyle = '#60A5FA';
     ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'left';
     
     for (let i = 0; i < SECTIONS; i++) {
       const y = cylY + 20 + sectionHeight * i + sectionHeight / 2;
-      ctx.fillText(`${SECTION_NAMES[i]} (2.5m)`, cylX + 10, y - sectionHeight / 2 + 20);
+      ctx.fillText(`${SECTION_NAMES[i]} (2.8m)`, cylX + 10, y - sectionHeight / 2 + 20);
     }
     
     ctx.strokeStyle = '#D1D5DB';
@@ -248,15 +283,15 @@ const HabitatDesigner = () => {
       drawModule(ctx, draggedModule, cylX, cylY + 20, true);
     }
     
-    const solarPanelWidth = 100;
-    const solarPanelHeight = 60;
+    const solarPanelWidth = 140;
+    const solarPanelHeight = 80;
     const solarPanelY = cylY + cylHeight / 2 - solarPanelHeight / 2;
-    const armLength = 15;
+    const armLength = 20;
     
     const leftPanelX = cylX - solarPanelWidth - armLength;
     
     ctx.strokeStyle = '#555';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(cylX, solarPanelY + solarPanelHeight / 2);
     ctx.lineTo(leftPanelX + solarPanelWidth, solarPanelY + solarPanelHeight / 2);
@@ -267,27 +302,27 @@ const HabitatDesigner = () => {
     
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 5; i++) {
       ctx.beginPath();
-      ctx.moveTo(leftPanelX, solarPanelY + (solarPanelHeight / 4) * i);
-      ctx.lineTo(leftPanelX + solarPanelWidth, solarPanelY + (solarPanelHeight / 4) * i);
+      ctx.moveTo(leftPanelX, solarPanelY + (solarPanelHeight / 5) * i);
+      ctx.lineTo(leftPanelX + solarPanelWidth, solarPanelY + (solarPanelHeight / 5) * i);
       ctx.stroke();
     }
-    for (let i = 0; i <= 6; i++) {
+    for (let i = 0; i <= 8; i++) {
       ctx.beginPath();
-      ctx.moveTo(leftPanelX + (solarPanelWidth / 6) * i, solarPanelY);
-      ctx.lineTo(leftPanelX + (solarPanelWidth / 6) * i, solarPanelY + solarPanelHeight);
+      ctx.moveTo(leftPanelX + (solarPanelWidth / 8) * i, solarPanelY);
+      ctx.lineTo(leftPanelX + (solarPanelWidth / 8) * i, solarPanelY + solarPanelHeight);
       ctx.stroke();
     }
     
     ctx.strokeStyle = '#1F2937';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeRect(leftPanelX, solarPanelY, solarPanelWidth, solarPanelHeight);
     
     const rightPanelX = cylX + cylWidth + armLength;
     
     ctx.strokeStyle = '#555';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(cylX + cylWidth, solarPanelY + solarPanelHeight / 2);
     ctx.lineTo(rightPanelX, solarPanelY + solarPanelHeight / 2);
@@ -298,21 +333,21 @@ const HabitatDesigner = () => {
     
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
+    for (let i = 0; i <= 5; i++) {
       ctx.beginPath();
-      ctx.moveTo(rightPanelX, solarPanelY + (solarPanelHeight / 4) * i);
-      ctx.lineTo(rightPanelX + solarPanelWidth, solarPanelY + (solarPanelHeight / 4) * i);
+      ctx.moveTo(rightPanelX, solarPanelY + (solarPanelHeight / 5) * i);
+      ctx.lineTo(rightPanelX + solarPanelWidth, solarPanelY + (solarPanelHeight / 5) * i);
       ctx.stroke();
     }
-    for (let i = 0; i <= 6; i++) {
+    for (let i = 0; i <= 8; i++) {
       ctx.beginPath();
-      ctx.moveTo(rightPanelX + (solarPanelWidth / 6) * i, solarPanelY);
-      ctx.lineTo(rightPanelX + (solarPanelWidth / 6) * i, solarPanelY + solarPanelHeight);
+      ctx.moveTo(rightPanelX + (solarPanelWidth / 8) * i, solarPanelY);
+      ctx.lineTo(rightPanelX + (solarPanelWidth / 8) * i, solarPanelY + solarPanelHeight);
       ctx.stroke();
     }
     
     ctx.strokeStyle = '#1F2937';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 4;
     ctx.strokeRect(rightPanelX, solarPanelY, solarPanelWidth, solarPanelHeight);
     
     ctx.fillStyle = '#1F2937';
@@ -320,7 +355,6 @@ const HabitatDesigner = () => {
     ctx.fillText(`${dimensions.length}m`, cylX + cylWidth + 10, cylY + cylHeight / 2);
     ctx.fillText(`${dimensions.diameter}m`, cylX + cylWidth / 2 - 15, cylY + cylHeight + 50);
     
-    // Restaurar el contexto
     ctx.restore();
   };
 
@@ -352,7 +386,6 @@ const HabitatDesigner = () => {
     const rect = canvas.getBoundingClientRect();
     const scale = zoomLevel / 100;
     
-    // Ajustar coordenadas del mouse según el zoom y pan
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
     
@@ -388,7 +421,6 @@ const HabitatDesigner = () => {
     const rect = canvas.getBoundingClientRect();
     const scale = zoomLevel / 100;
     
-    // Ajustar coordenadas del mouse según el zoom y pan
     const rawX = e.clientX - rect.left;
     const rawY = e.clientY - rect.top;
     
@@ -412,14 +444,11 @@ const HabitatDesigner = () => {
   const handleCanvasMouseUp = () => {
     if (!draggedModule) return;
     
-    const cylHeight = dimensions.length * SCALE;
-    const sectionHeight = (cylHeight - 20) / SECTIONS;
-    
-    let moduleSection = Math.floor((draggedModule.y * SCALE) / sectionHeight);
+    let moduleSection = Math.floor(draggedModule.y / SECTION_HEIGHT);
     moduleSection = Math.max(0, Math.min(moduleSection, SECTIONS - 1));
     
-    const sectionStartY = (moduleSection * sectionHeight) / SCALE;
-    const sectionEndY = ((moduleSection + 1) * sectionHeight) / SCALE;
+    const sectionStartY = moduleSection * SECTION_HEIGHT;
+    const sectionEndY = (moduleSection + 1) * SECTION_HEIGHT;
     
     let finalX = Math.max(0, Math.min(draggedModule.x, dimensions.diameter - draggedModule.width));
     let finalY = Math.max(sectionStartY, Math.min(draggedModule.y, sectionEndY - draggedModule.length));
@@ -435,16 +464,14 @@ const HabitatDesigner = () => {
       setPlacedModules([...placedModules, moduleToPlace]);
       setDraggedModule(null);
     } else {
-      setErrorMessage(`❌ No hay espacio en ${SECTION_NAMES[moduleSection]}: ${validationResult.reason}`);
+      setErrorMessage(`❌ No space in ${SECTION_NAMES[moduleSection]}: ${validationResult.reason}`);
       setDraggedModule(null);
     }
   };
 
   const addModule = (moduleType) => {
     const targetSection = selectedSection !== null ? selectedSection : 0;
-    const cylHeight = dimensions.length * SCALE;
-    const sectionHeight = (cylHeight - 20) / SECTIONS;
-    const sectionStartY = (targetSection * sectionHeight) / SCALE;
+    const sectionStartY = targetSection * SECTION_HEIGHT;
     
     const newModule = {
       ...moduleType,
@@ -459,7 +486,7 @@ const HabitatDesigner = () => {
     if (validationResult.canPlace) {
       setPlacedModules([...placedModules, newModule]);
     } else {
-      setErrorMessage(`❌ No hay espacio en ${SECTION_NAMES[targetSection]}: ${validationResult.reason}`);
+      setErrorMessage(`❌ No space in ${SECTION_NAMES[targetSection]}: ${validationResult.reason}`);
     }
   };
 
@@ -500,9 +527,9 @@ const HabitatDesigner = () => {
       const utilizationPercent = (usedArea / sectionArea * 100).toFixed(1);
       
       if (utilizationPercent > 90) {
-        issues.push({ type: 'warning', msg: `${SECTION_NAMES[s]}: ${utilizationPercent}% - Muy saturada` });
+        issues.push({ type: 'warning', msg: `${SECTION_NAMES[s]}: ${utilizationPercent}% - Very crowded` });
       } else if (utilizationPercent > 0) {
-        issues.push({ type: 'info', msg: `${SECTION_NAMES[s]}: ${utilizationPercent}% de espacio usado (${usedArea.toFixed(1)}m² / ${sectionArea.toFixed(1)}m²)` });
+        issues.push({ type: 'info', msg: `${SECTION_NAMES[s]}: ${utilizationPercent}% of space used (${usedArea.toFixed(1)}m² / ${sectionArea.toFixed(1)}m²)` });
       }
     }
     
@@ -510,22 +537,17 @@ const HabitatDesigner = () => {
     const usedArea = placedModules.reduce((sum, m) => sum + (m.width * m.length), 0);
     const utilizationPercent = (usedArea / totalArea * 100).toFixed(1);
     
-    issues.push({ type: 'success', msg: `Uso total del hábitat: ${utilizationPercent}%` });
+    issues.push({ type: 'success', msg: `Total habitat usage: ${utilizationPercent}%` });
     
-    const pasillos = placedModules.filter(m => m.id.startsWith('pasillo'));
-    pasillos.forEach(pasillo => {
-      if (pasillo.width < 0.6) {
-        issues.push({ type: 'error', msg: `Pasillo en ${SECTION_NAMES[pasillo.section]} muy estrecho (${pasillo.width}m) - Mínimo 0.6m` });
-      }
-    });
+    const hasGalley = placedModules.some(m => m.id.startsWith('cocina'));
+    const hasBathroom = placedModules.some(m => m.id.startsWith('bano'));
+    const hasSleepingQuarter = placedModules.some(m => m.id.startsWith('cama'));
+    const hasLifeSupport = placedModules.some(m => m.id.startsWith('soporte-vital'));
     
-    const hasCocina = placedModules.some(m => m.id.startsWith('cocina'));
-    const hasBano = placedModules.some(m => m.id.startsWith('bano'));
-    const hasCama = placedModules.some(m => m.id.startsWith('cama'));
-    
-    if (!hasCocina) issues.push({ type: 'warning', msg: 'Falta módulo de cocina' });
-    if (!hasBano) issues.push({ type: 'warning', msg: 'Falta módulo de baño' });
-    if (!hasCama) issues.push({ type: 'warning', msg: 'Falta módulo de dormitorio' });
+    if (!hasGalley) issues.push({ type: 'warning', msg: 'Missing galley module' });
+    if (!hasBathroom) issues.push({ type: 'warning', msg: 'Missing bathroom module' });
+    if (!hasSleepingQuarter) issues.push({ type: 'warning', msg: 'Missing sleeping quarter module' });
+    if (!hasLifeSupport) issues.push({ type: 'warning', msg: 'Missing life support module' });
     
     setValidationIssues(issues);
   };
@@ -546,18 +568,18 @@ const HabitatDesigner = () => {
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
             NASA Habitat Designer
           </h1>
-          <p className="text-slate-300">Space Apps Challenge - Diseñador de Hábitats Espaciales</p>
+          <p className="text-slate-300">Space Apps Challenge - Space Habitat Designer</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              ⚙️ Configuración
+              ⚙️ Configuration
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Cantidad de Tripulantes</label>
+                <label className="block text-sm font-medium mb-2">Crew Size</label>
                 <div className="grid grid-cols-5 gap-2 mb-2">
                   {[2, 3, 4, 5, 6].map(size => (
                     <button
@@ -575,13 +597,13 @@ const HabitatDesigner = () => {
                 </div>
                 <div className="text-xs text-slate-400 bg-slate-700 p-2 rounded">
                   {crewSize <= 3 
-                    ? '2-3 tripulantes: 1 área habitable + 1 área de servicio (5m)'
-                    : '4-6 tripulantes: 2 áreas habitables + 1 área de servicio (7.5m)'}
+                    ? '2-3 crew: 1 habitable + 1 service area (5.6m)'
+                    : '4-6 crew: 2 habitable (upper/lower) + 1 service area (8.4m)'}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Forma del Módulo Espacial</label>
+                <label className="block text-sm font-medium mb-2">Spacecraft Module Shape</label>
                 <select
                   value={habitatType}
                   onChange={(e) => {
@@ -605,15 +627,15 @@ const HabitatDesigner = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Largo Total (automático)</label>
+                <label className="block text-sm font-medium mb-2">Total Length (automatic)</label>
                 <div className="bg-slate-700 p-4 rounded text-center">
                   <div className="text-3xl font-bold text-blue-400">{dimensions.length}m</div>
-                  <div className="text-xs text-slate-400 mt-1">{SECTIONS} secciones × 2.5m cada una</div>
+                  <div className="text-xs text-slate-400 mt-1">{SECTIONS} sections × 2.8m each</div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Diámetro (metros)</label>
+                <label className="block text-sm font-medium mb-2">Diameter (meters)</label>
                 <input
                   type="range"
                   min="5"
@@ -629,19 +651,19 @@ const HabitatDesigner = () => {
               <div className="pt-4 border-t border-slate-700">
                 <div className="text-sm text-slate-400">
                   <div className="flex justify-between mb-1">
-                    <span>Configuración:</span>
-                    <span className="font-bold">{SECTIONS} secciones × 2.5m</span>
+                    <span>Configuration:</span>
+                    <span className="font-bold">{SECTIONS} sections × 2.8m</span>
                   </div>
                   <div className="flex justify-between mb-1">
-                    <span>Volumen total:</span>
+                    <span>Total volume:</span>
                     <span className="font-bold">{(Math.PI * Math.pow(dimensions.diameter/2, 2) * dimensions.length).toFixed(2)}m³</span>
                   </div>
                   <div className="flex justify-between mb-1">
-                    <span>Área por sección:</span>
+                    <span>Area per section:</span>
                     <span className="font-bold">{(dimensions.diameter * SECTION_HEIGHT).toFixed(2)}m²</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Área total planta:</span>
+                    <span>Total floor area:</span>
                     <span className="font-bold">{(dimensions.diameter * dimensions.length).toFixed(2)}m²</span>
                   </div>
                 </div>
@@ -658,10 +680,10 @@ const HabitatDesigner = () => {
             )}
 
             <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
-              <h2 className="text-xl font-bold mb-4">📦 Módulos Disponibles</h2>
+              <h2 className="text-xl font-bold mb-4">📦 Available Modules</h2>
               
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">Agregar módulos a:</label>
+                <label className="block text-sm font-medium mb-2">Add modules to:</label>
                 <div className="flex gap-2">
                   {Array.from({ length: SECTIONS }, (_, i) => i).map(section => (
                     <button
@@ -679,23 +701,34 @@ const HabitatDesigner = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2">
                 {availableModules.map(module => (
                   <button
                     key={module.id}
                     onClick={() => addModule(module)}
-                    className="p-4 bg-slate-700 hover:bg-slate-600 rounded-lg transition transform hover:scale-105 flex flex-col items-center gap-2"
+                    className={`p-2 rounded-lg transition-all transform hover:scale-105 active:scale-95 active:bg-blue-600 active:border-blue-400 active:shadow-lg flex flex-col items-center gap-1 ${
+                      module.serviceOnly 
+                        ? 'bg-slate-600 hover:bg-slate-500 border-2 border-orange-500' 
+                        : 'bg-slate-700 hover:bg-slate-600 border-2 border-transparent'
+                    }`}
                   >
-                    <div className="text-3xl">{module.icon}</div>
-                    <div className="text-xs font-medium text-center">{module.name}</div>
-                    <div className="text-xs text-slate-400">{module.width}×{module.length}m</div>
+                    <div className="text-xl">{module.icon}</div>
+                    <div className="text-xs font-medium text-center leading-tight">{module.name}</div>
+                    <div className="text-xs text-slate-400">
+                      <div>L:{module.width}m</div>
+                      <div>H:{module.length}m</div>
+                      {module.depth && <div className="text-xs text-slate-500">D:{module.depth}m</div>}
+                    </div>
+                    {module.serviceOnly && (
+                      <div className="text-xs text-orange-400 font-semibold">⚠️</div>
+                    )}
                   </button>
                 ))}
               </div>
 
               {placedModules.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-slate-700">
-                  <h3 className="font-bold mb-3">Módulos Colocados ({placedModules.length})</h3>
+                  <h3 className="font-bold mb-3">Placed Modules ({placedModules.length})</h3>
                   {Array.from({ length: SECTIONS }, (_, i) => i).map(section => {
                     const modulesInSection = placedModules.filter(m => m.section === section);
                     if (modulesInSection.length === 0) return null;
@@ -727,7 +760,7 @@ const HabitatDesigner = () => {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xl font-bold flex items-center gap-2">
-                    🏗️ Vista de Perfil 2D
+                    🏗️ 2D Profile View
                   </h2>
                   <div className="flex items-center gap-3">
                     <button
@@ -778,7 +811,6 @@ const HabitatDesigner = () => {
                   className="border border-slate-700 cursor-move rounded"
                 />
                 
-                {/* Control de navegación flotante */}
                 <div className="absolute bottom-4 left-4 bg-slate-800 bg-opacity-70 backdrop-blur-sm rounded-lg p-2 shadow-lg">
                   <div className="grid grid-cols-3 gap-1" style={{ width: '80px' }}>
                     <div></div>
@@ -798,7 +830,7 @@ const HabitatDesigner = () => {
                     <button
                       onClick={() => handlePan('reset')}
                       className="p-1 bg-blue-600 bg-opacity-80 hover:bg-blue-500 rounded transition text-xs"
-                      title="Centrar vista"
+                      title="Center view"
                     >
                       ⊙
                     </button>
@@ -821,15 +853,18 @@ const HabitatDesigner = () => {
               </div>
               <p className="text-sm text-slate-400 mt-2 text-center">
                 <Move size={14} className="inline mr-1" />
-                Arrastra los módulos | Usa +/− para zoom | Flechas para navegar
+                Drag modules | Modules can overlap (different depths) | Zoom +/− | Arrows to navigate
               </p>
             </div>
 
             <div className="bg-slate-800 rounded-lg p-6 shadow-xl">
-              <h2 className="text-xl font-bold mb-4">📊 Validación del Diseño</h2>
+              <h2 className="text-xl font-bold mb-4">📊 Design Validation</h2>
+              <div className="mb-3 p-3 bg-blue-900 bg-opacity-30 border border-blue-500 rounded text-xs text-blue-200">
+                ℹ️ Modules can overlap in 2D view as they are at different depths within the circular cylinder
+              </div>
               <div className="space-y-2">
                 {validationIssues.length === 0 ? (
-                  <p className="text-slate-400">Agrega módulos para comenzar...</p>
+                  <p className="text-slate-400">Add modules to start...</p>
                 ) : (
                   validationIssues.map((issue, idx) => (
                     <div key={idx} className="flex items-start gap-2 p-2 bg-slate-700 rounded">
@@ -838,6 +873,132 @@ const HabitatDesigner = () => {
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-slate-800 rounded-lg p-6 shadow-xl">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            📊 Habitat Statistics
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">⚖️</span>
+                <h3 className="text-sm font-medium text-slate-300">Total Weight</h3>
+              </div>
+              <div className="text-3xl font-bold text-blue-400">
+                {placedModules.reduce((sum, m) => sum + (m.weight || 0), 0)} kg
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Interior modules
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📦</span>
+                <h3 className="text-sm font-medium text-slate-300">Total Volume</h3>
+              </div>
+              <div className="text-3xl font-bold text-purple-400">
+                {(Math.PI * Math.pow(dimensions.diameter/2, 2) * dimensions.length).toFixed(2)} m³
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Cylinder capacity
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📥</span>
+                <h3 className="text-sm font-medium text-slate-300">Occupied Volume</h3>
+              </div>
+              <div className="text-3xl font-bold text-orange-400">
+                {placedModules.reduce((sum, m) => {
+                  const moduleVolume = m.width * m.length * SECTION_HEIGHT;
+                  return sum + moduleVolume;
+                }, 0).toFixed(2)} m³
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Space used by modules
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📤</span>
+                <h3 className="text-sm font-medium text-slate-300">Available Volume</h3>
+              </div>
+              <div className="text-3xl font-bold text-green-400">
+                {(() => {
+                  const totalVolume = Math.PI * Math.pow(dimensions.diameter/2, 2) * dimensions.length;
+                  const occupiedVolume = placedModules.reduce((sum, m) => {
+                    return sum + (m.width * m.length * SECTION_HEIGHT);
+                  }, 0);
+                  return (totalVolume - occupiedVolume).toFixed(2);
+                })()}
+                {' '}m³
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Remaining free space
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📊</span>
+                <h3 className="text-sm font-medium text-slate-300">Occupancy</h3>
+              </div>
+              <div className="text-3xl font-bold text-cyan-400">
+                {(() => {
+                  const totalArea = dimensions.diameter * dimensions.length;
+                  const usedArea = placedModules.reduce((sum, m) => sum + (m.width * m.length), 0);
+                  return (usedArea / totalArea * 100).toFixed(1);
+                })()}%
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Used floor area
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">👥</span>
+                <h3 className="text-sm font-medium text-slate-300">Crew Members</h3>
+              </div>
+              <div className="text-3xl font-bold text-yellow-400">
+                {crewSize}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Configured capacity
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🔲</span>
+                <h3 className="text-sm font-medium text-slate-300">Sections</h3>
+              </div>
+              <div className="text-3xl font-bold text-pink-400">
+                {SECTIONS}
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {SECTIONS === 2 ? '1 habitable + 1 service' : '2 habitable (upper/lower) + 1 service'}
+              </div>
+            </div>
+
+            <div className="bg-slate-700 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">📏</span>
+                <h3 className="text-sm font-medium text-slate-300">Dimensions</h3>
+              </div>
+              <div className="text-2xl font-bold text-indigo-400">
+                ⌀{dimensions.diameter}m × {dimensions.length}m
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                Diameter × Length
               </div>
             </div>
           </div>
