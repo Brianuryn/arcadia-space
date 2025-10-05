@@ -22,6 +22,7 @@ function Navbar() {
       <ul className="navbar-links">
         <li style={{marginLeft: 20}}><Link to="/">Inicio</Link></li>
         <li><Link to="/habitat-designer">Diseñador de Hábitats</Link></li>
+        <li><Link to="/habitat-designer-b">Diseñador de Hábitats Vertical(Demo)</Link></li>
         <li><Link to="/bio-arkadia">BioArkadia</Link></li>
       </ul>
     </nav>

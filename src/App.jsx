@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import BioArkadia from "./pages/BioArkadia";
 import HabitatDesigner from './components/HabitatDesigner';
+import HabitatDesignerB from './components/HabitatDesignerVertical';
 import Footer from "./components/Footer";
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/habitat-designer" element={<HabitatDesigner />} />
+        <Route path="/habitat-designer-b" element={<HabitatDesignerB />} />
         <Route path="/bio-arkadia" element={<BioArkadia />} />
       </Routes>
       <Footer />
