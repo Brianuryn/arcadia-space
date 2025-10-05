@@ -41,12 +41,12 @@
   "main": "eslint.config.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Brianuryn/arcadia-space.git"
+    "url": "git+https://github.com/Brianuryn/arkadia-space.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Brianuryn/arcadia-space/issues"
+    "url": "https://github.com/Brianuryn/arkadia-space/issues"
   }
 }

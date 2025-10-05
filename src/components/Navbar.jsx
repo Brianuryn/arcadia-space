@@ -30,9 +30,9 @@ function Navbar() {
       </button>
 
       <ul className={`navbar-links ${isOpen ? "open" : ""}`}>
-        <li><Link to="/" onClick={closeMenu}>Inicio</Link></li>
-        <li><Link to="/habitat-designer" onClick={closeMenu}>Diseñador de Hábitats</Link></li>
-        <li><Link to="/habitat-designer-b" onClick={closeMenu}>Diseñador Vertical (Demo)</Link></li>
+        <li><Link to="/" onClick={closeMenu}>Home</Link></li>
+        <li><Link to="/habitat-designer" onClick={closeMenu}>Habitat Designer</Link></li>
+        <li><Link to="/habitat-designer-b" onClick={closeMenu}>Vertical Habitat Designer (Demo)</Link></li>
         <li><Link to="/bio-arkadia" onClick={closeMenu}>BioArkadia</Link></li>
       </ul>
     </nav>

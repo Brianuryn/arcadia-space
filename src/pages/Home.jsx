@@ -7,8 +7,8 @@ function Home() {
   return (
     <div className="home-container" style={{backgroundImage: `url(${bg})`}}>
       <div className="home-content">
-        <h1>Bienvenido a Arkadia Space 🚀</h1>
-        <p>Explorando el futuro del hábitat espacial.</p>
+        <h1>Wellcome to Arkadia Space 🚀</h1>
+        <p>Exploring the future of space habitat.</p>
       </div>
     </div>
   );
